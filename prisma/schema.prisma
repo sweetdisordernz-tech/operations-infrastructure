@@ -221,7 +221,7 @@ model Filling {
 
   supplier  Supplier?         @relation(fields: [supplierId], references: [id])
   products  Product[]
-  inventory FillingInventory[]
+  inventory FillingInventory?
 
   @@index([supplierId])
   @@map("fillings")

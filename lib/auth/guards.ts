@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import type { UserRole } from "@prisma/client";
 import { getCurrentUser, getCurrentWholesaleCustomer } from "@/lib/auth/current-user";
 
@@ -7,6 +8,14 @@ export class AuthError extends Error {
     super(message);
     this.status = status;
   }
+}
+
+/** For API route catch blocks: returns a JSON error response for an AuthError, or null for anything else so the caller can rethrow/handle it. */
+export function authErrorResponse(err: unknown): NextResponse | null {
+  if (err instanceof AuthError) {
+    return NextResponse.json({ error: err.message }, { status: err.status });
+  }
+  return null;
 }
 
 /**
