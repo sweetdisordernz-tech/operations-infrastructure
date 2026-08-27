@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getNextDispatchOrder } from "@/lib/tasks/dispatch";
-import { BigSubmitButton } from "@/app/_components/big-submit-button";
+import { TaskActionForm } from "@/app/_components/task-action-form";
 import { OrderTaskLineItemList } from "@/app/_components/order-task-line-item-list";
 import { completeDispatchAction } from "./actions";
 
@@ -23,10 +23,12 @@ export default async function DispatchPage() {
             <div className="sd-task-card">
               <p className="sd-task-order">Order {order.orderNumber}</p>
               <OrderTaskLineItemList lineItems={order.lineItems} />
-              <form action={completeDispatchAction}>
-                <input type="hidden" name="orderId" value={order.orderId} />
-                <BigSubmitButton pendingLabel="Marking done...">Mark all done</BigSubmitButton>
-              </form>
+              <TaskActionForm
+                action={completeDispatchAction}
+                hiddenFields={{ orderId: order.orderId }}
+                buttonLabel="Mark all done"
+                pendingLabel="Marking done..."
+              />
             </div>
           ) : (
             <div className="sd-task-card">

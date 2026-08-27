@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getNextLabellingBatch } from "@/lib/tasks/labelling";
 import { formatPackagingType } from "@/lib/format";
-import { BigSubmitButton } from "@/app/_components/big-submit-button";
+import { TaskActionForm } from "@/app/_components/task-action-form";
 import { completeLabellingBatchAction } from "./actions";
 
 export default async function LabelPage() {
@@ -29,12 +29,12 @@ export default async function LabelPage() {
               <p className="sd-task-qty-label">
                 needed across {batch.orderCount} order{batch.orderCount === 1 ? "" : "s"}
               </p>
-              <form action={completeLabellingBatchAction}>
-                <input type="hidden" name="productId" value={batch.productId} />
-                <BigSubmitButton pendingLabel="Marking done...">
-                  Mark this batch done
-                </BigSubmitButton>
-              </form>
+              <TaskActionForm
+                action={completeLabellingBatchAction}
+                hiddenFields={{ productId: batch.productId }}
+                buttonLabel="Mark this batch done"
+                pendingLabel="Marking done..."
+              />
             </div>
           ) : (
             <div className="sd-task-card">

@@ -138,6 +138,21 @@ function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+// Plausible wholesale unit prices by packaging type, for seed/test data only
+// - Molly will set real pricing later. Tins are sold in 4-packs
+// (min_order_qty), so priced lower per unit than a bottle/jar.
+const WHOLESALE_PRICE_RANGE_BY_PACKAGING: Record<PackagingType, [number, number]> = {
+  [PackagingType.BOTTLE]: [6, 8],
+  [PackagingType.JAR]: [9, 11],
+  [PackagingType.TIN]: [2.5, 3.5],
+  [PackagingType.STAND]: [120, 160],
+};
+
+function wholesalePriceFor(packagingType: PackagingType): number {
+  const [min, max] = WHOLESALE_PRICE_RANGE_BY_PACKAGING[packagingType];
+  return Math.round((min + Math.random() * (max - min)) * 100) / 100;
+}
+
 async function main() {
   const catalog = loadCatalog();
   console.log(`Loaded ${catalog.length} catalog rows from prisma/data/catalog.csv`);
@@ -219,13 +234,25 @@ async function main() {
   console.log(`Seeded ${fillingByName.size} distinct fillings (deduped, case-normalized)`);
 
   // -------------------------------------------------------------------------
-  // Products (+ inventory item per product)
+  // Pricing tier (created before products so each product can get a
+  // PricingTierProduct row in the same pass below)
+  // -------------------------------------------------------------------------
+  const pricingTier = await prisma.pricingTier.upsert({
+    where: { id: "seed-pricing-tier-nz-standard" },
+    update: { name: "NZ Standard Wholesale", region: Region.NZ },
+    create: { id: "seed-pricing-tier-nz-standard", name: "NZ Standard Wholesale", region: Region.NZ },
+  });
+
+  // -------------------------------------------------------------------------
+  // Products (+ inventory item + wholesale price per product)
   // -------------------------------------------------------------------------
   let productCount = 0;
   for (const row of catalog) {
     const range = rangeByName.get(row.range)!;
     const filling = row.filling ? fillingByName.get(titleCase(row.filling)) : null;
 
+    // Every seeded product is wholesale-visible so the portal has a full
+    // catalog to test against - Molly can narrow this down for real later.
     const product = row.sku
       ? await prisma.product.upsert({
           where: { sku: row.sku },
@@ -236,6 +263,7 @@ async function main() {
             packagingType: row.packagingType,
             fillingId: filling?.id,
             minOrderQty: row.minOrderQty,
+            wholesaleVisible: true,
           },
           create: {
             sku: row.sku,
@@ -245,6 +273,7 @@ async function main() {
             packagingType: row.packagingType,
             fillingId: filling?.id,
             minOrderQty: row.minOrderQty,
+            wholesaleVisible: true,
           },
         })
       : await (async () => {
@@ -261,6 +290,7 @@ async function main() {
                 packagingType: row.packagingType,
                 fillingId: filling?.id,
                 minOrderQty: row.minOrderQty,
+                wholesaleVisible: true,
               },
             });
           }
@@ -273,6 +303,7 @@ async function main() {
               packagingType: row.packagingType,
               fillingId: filling?.id,
               minOrderQty: row.minOrderQty,
+              wholesaleVisible: true,
             },
           });
         })();
@@ -290,19 +321,26 @@ async function main() {
       },
     });
 
+    // Don't overwrite a price someone's already set via Master Connect -
+    // only fill it in the first time, same idempotency pattern as inventory
+    // above.
+    await prisma.pricingTierProduct.upsert({
+      where: { pricingTierId_productId: { pricingTierId: pricingTier.id, productId: product.id } },
+      update: {},
+      create: {
+        pricingTierId: pricingTier.id,
+        productId: product.id,
+        price: wholesalePriceFor(product.packagingType),
+      },
+    });
+
     productCount++;
   }
-  console.log(`Seeded ${productCount} products (+ inventory items)`);
+  console.log(`Seeded ${productCount} products (+ inventory items + NZ Standard wholesale prices)`);
 
   // -------------------------------------------------------------------------
-  // Pricing tier, wholesale customer, staff users
+  // Wholesale customer, staff users
   // -------------------------------------------------------------------------
-  const pricingTier = await prisma.pricingTier.upsert({
-    where: { id: "seed-pricing-tier-nz-standard" },
-    update: { name: "NZ Standard Wholesale", region: Region.NZ },
-    create: { id: "seed-pricing-tier-nz-standard", name: "NZ Standard Wholesale", region: Region.NZ },
-  });
-
   await prisma.wholesaleCustomer.upsert({
     where: { email: "buyer@example-giftshop.co.nz" },
     update: {},
@@ -312,6 +350,9 @@ async function main() {
       email: "buyer@example-giftshop.co.nz",
       phone: "+64 21 555 0123",
       region: Region.NZ,
+      // True in seed data specifically so the demo customer can exercise
+      // the NZ/AU cart-splitting flow end to end.
+      shipsToBothRegions: true,
       pricingTierId: pricingTier.id,
     },
   });

@@ -25,3 +25,19 @@ export function sendMagicLinkEmail(to: string, magicLinkUrl: string) {
     text: `Click to sign in: ${magicLinkUrl}\n\nThis link expires in 15 minutes. If you didn't request this, you can ignore it.`,
   });
 }
+
+export function sendOrderConfirmationEmail(
+  to: string,
+  contactName: string,
+  orders: Array<{ orderNumber: string; region: string; currency: string; totalAmount: number }>,
+) {
+  const lines = orders.map(
+    (order) => `  Order ${order.orderNumber} (${order.region}): ${order.currency} ${order.totalAmount.toFixed(2)}`,
+  );
+  return sendEmail({
+    to,
+    subject:
+      orders.length > 1 ? "Your Sweet Disorder orders are confirmed" : `Order confirmed - ${orders[0].orderNumber}`,
+    text: `Hi ${contactName},\n\nThanks for your order! Here's what we've got:\n\n${lines.join("\n")}\n\nWe'll be in touch with an invoice shortly.\n\n- Sweet Disorder`,
+  });
+}
