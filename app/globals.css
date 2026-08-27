@@ -1,0 +1,157 @@
+:root {
+  --sd-bg: #0f0f12;
+  --sd-panel: #18181d;
+  --sd-border: #2a2a31;
+  --sd-text: #f2f2f4;
+  --sd-text-dim: #9a9aa2;
+  --sd-accent: #ff5c8a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  background: var(--sd-bg);
+  color: var(--sd-text);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    sans-serif;
+}
+
+a {
+  color: var(--sd-accent);
+}
+
+.sd-shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.sd-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--sd-border);
+  background: var(--sd-panel);
+}
+
+.sd-topbar-brand {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.sd-topbar-surface {
+  font-size: 0.8rem;
+  color: var(--sd-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border: 1px solid var(--sd-border);
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+}
+
+.sd-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+}
+
+.sd-card {
+  max-width: 32rem;
+  width: 100%;
+  background: var(--sd-panel);
+  border: 1px solid var(--sd-border);
+  border-radius: 0.75rem;
+  padding: 2rem;
+}
+
+.sd-card h1 {
+  margin-top: 0;
+  font-size: 1.5rem;
+}
+
+.sd-card p {
+  color: var(--sd-text-dim);
+  line-height: 1.5;
+}
+
+.sd-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.sd-pill-row a {
+  border: 1px solid var(--sd-border);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.9rem;
+  text-decoration: none;
+  font-size: 0.85rem;
+  color: var(--sd-text);
+}
+
+.sd-pill-row a:hover {
+  border-color: var(--sd-accent);
+  color: var(--sd-accent);
+}
+
+.sd-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.sd-form input {
+  background: var(--sd-bg);
+  border: 1px solid var(--sd-border);
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  color: var(--sd-text);
+  font-size: 1rem;
+}
+
+.sd-form button {
+  background: var(--sd-accent);
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  color: #1a1a1a;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.sd-form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sd-note {
+  font-size: 0.8rem;
+  color: var(--sd-text-dim);
+  margin-top: 1rem;
+}
+
+.sd-pin-grid {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.sd-pin-grid input {
+  width: 3rem;
+  text-align: center;
+  font-size: 1.5rem;
+}

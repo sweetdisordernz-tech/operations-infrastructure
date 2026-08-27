@@ -1,0 +1,457 @@
+// Sweet Disorder Ops - shared Prisma schema (stage 1 foundation)
+// Neon Postgres via the Neon serverless driver adapter.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  OWNER_ADMIN
+  EMPLOYEE
+}
+
+enum Region {
+  NZ
+  AU
+}
+
+enum PackagingType {
+  BOTTLE
+  JAR
+  TIN
+  STAND
+}
+
+enum AllergenStatus {
+  CORRECT
+  NEEDS_CHANGE_URGENT
+  NEEDS_CHANGE_NON_URGENT
+}
+
+enum AddressStatus {
+  CORRECT
+  INCORRECT
+}
+
+enum CountryOfOriginStatus {
+  CORRECT
+  INCORRECT
+}
+
+enum NutritionBoxStatus {
+  CORRECT
+  NEEDS_COLUMN_ADDED
+  INCORRECT
+}
+
+enum LabelUrgency {
+  TOP_PRIORITY_URGENT
+  URGENT_CHANGE_NEEDED
+  CHANGE_NEEDED_NOT_URGENT
+  NO_CHANGE_NEEDED
+}
+
+enum OrderSource {
+  SHOPIFY
+  WHOLESALE_PORTAL
+}
+
+enum OrderStatus {
+  PENDING
+  LABELLING
+  PACKING
+  DISPATCHED
+}
+
+enum PaymentPhase {
+  INVOICE
+  PORTAL_PAYMENT
+}
+
+enum PaymentStatus {
+  AWAITING_INVOICE
+  PAID
+}
+
+enum OrderTaskStage {
+  LABELLING
+  PACKING
+  DISPATCH
+}
+
+enum OrderTaskStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+}
+
+enum SalesLeadStage {
+  NEW
+  CONTACTED
+  QUOTED
+  WON
+  LOST
+}
+
+enum IntegrationName {
+  SHOPIFY
+  XERO
+  KLAVIYO
+  BREVO
+}
+
+enum IntegrationDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum IntegrationSyncStatus {
+  SUCCESS
+  FAILURE
+  PARTIAL
+}
+
+// ---------------------------------------------------------------------------
+// Auth / staff
+// ---------------------------------------------------------------------------
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  role      UserRole
+  pinHash   String?  @map("pin_hash")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  magicLinkTokens    MagicLinkToken[]
+  assignedOrderTasks OrderTask[]         @relation("OrderTaskAssignedEmployee")
+  labourLogs         EmployeeLabourLog[]
+  ownedSalesLeads    SalesLead[]         @relation("SalesLeadOwner")
+
+  @@map("users")
+}
+
+model WholesaleCustomer {
+  id                String   @id @default(cuid())
+  companyName       String   @map("company_name")
+  contactName       String   @map("contact_name")
+  email             String   @unique
+  phone             String?
+  region            Region
+  pricingTierId     String?  @map("pricing_tier_id")
+  shopifyCustomerId String?  @unique @map("shopify_customer_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  pricingTier      PricingTier?     @relation(fields: [pricingTierId], references: [id])
+  orders           Order[]
+  magicLinkTokens  MagicLinkToken[]
+
+  @@index([pricingTierId])
+  @@map("wholesale_customers")
+}
+
+model PricingTier {
+  id        String   @id @default(cuid())
+  name      String
+  region    Region
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  wholesaleCustomers WholesaleCustomer[]
+
+  @@map("pricing_tiers")
+}
+
+model MagicLinkToken {
+  id                  String    @id @default(cuid())
+  email               String
+  tokenHash           String    @unique @map("token_hash")
+  expiresAt           DateTime  @map("expires_at")
+  usedAt              DateTime? @map("used_at")
+  userId              String?   @map("user_id")
+  wholesaleCustomerId String?   @map("wholesale_customer_id")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  user              User?              @relation(fields: [userId], references: [id])
+  wholesaleCustomer WholesaleCustomer? @relation(fields: [wholesaleCustomerId], references: [id])
+
+  @@index([email])
+  @@index([userId])
+  @@index([wholesaleCustomerId])
+  @@map("magic_link_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Catalog
+// ---------------------------------------------------------------------------
+
+model ProductRange {
+  id        String   @id @default(cuid())
+  name      String
+  skuPrefix String   @map("sku_prefix")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  products Product[]
+
+  @@map("product_ranges")
+}
+
+model Filling {
+  id                String   @id @default(cuid())
+  name              String   @unique
+  supplierId        String?  @map("supplier_id")
+  unitOfPurchase    String?  @map("unit_of_purchase")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  supplier  Supplier?         @relation(fields: [supplierId], references: [id])
+  products  Product[]
+  inventory FillingInventory[]
+
+  @@index([supplierId])
+  @@map("fillings")
+}
+
+model FillingInventory {
+  id                       String    @id @default(cuid())
+  fillingId                String    @unique @map("filling_id")
+  quantityOnHand           Decimal   @default(0) @map("quantity_on_hand")
+  portionsPerPurchaseUnit  Decimal?  @map("portions_per_purchase_unit")
+  reorderThreshold         Decimal?  @map("reorder_threshold")
+  lastCountedAt            DateTime? @map("last_counted_at")
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
+
+  filling Filling @relation(fields: [fillingId], references: [id])
+
+  @@map("filling_inventory")
+}
+
+model Product {
+  id               String        @id @default(cuid())
+  sku              String?       @unique
+  barcode          String?
+  name             String
+  rangeId          String        @map("range_id")
+  packagingType    PackagingType @map("packaging_type")
+  fillingId        String?       @map("filling_id")
+  minOrderQty      Int           @default(1) @map("min_order_qty")
+  imageBlobUrl     String?       @map("image_blob_url")
+  active           Boolean       @default(true)
+  discontinued     Boolean       @default(false)
+  wholesaleVisible Boolean       @default(false) @map("wholesale_visible")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+
+  range                   ProductRange           @relation(fields: [rangeId], references: [id])
+  filling                 Filling?               @relation(fields: [fillingId], references: [id])
+  inventoryItem           InventoryItem?
+  labelComplianceRecords  LabelComplianceRecord[]
+  orderLineItems          OrderLineItem[]
+
+  @@index([rangeId])
+  @@index([fillingId])
+  @@map("products")
+}
+
+model Supplier {
+  id            String   @id @default(cuid())
+  name          String
+  contactEmail  String?  @map("contact_email")
+  contactPhone  String?  @map("contact_phone")
+  leadTimeDays  Int?     @map("lead_time_days")
+  notes         String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  fillings       Filling[]
+  inventoryItems InventoryItem[]
+
+  @@map("suppliers")
+}
+
+// ---------------------------------------------------------------------------
+// Inventory
+// ---------------------------------------------------------------------------
+
+model InventoryItem {
+  id                    String    @id @default(cuid())
+  productId             String    @unique @map("product_id")
+  quantityOnHand        Int       @default(0) @map("quantity_on_hand")
+  reorderThreshold      Int?      @map("reorder_threshold")
+  recommendedReorderQty Int?      @map("recommended_reorder_qty")
+  supplierId            String?   @map("supplier_id")
+  lastCountedAt         DateTime? @map("last_counted_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  product  Product   @relation(fields: [productId], references: [id])
+  supplier Supplier? @relation(fields: [supplierId], references: [id])
+
+  @@index([supplierId])
+  @@map("inventory_items")
+}
+
+// ---------------------------------------------------------------------------
+// Label compliance
+// ---------------------------------------------------------------------------
+
+model LabelComplianceRecord {
+  id                        String                 @id @default(cuid())
+  productId                 String                 @map("product_id")
+  allergenStatus            AllergenStatus         @map("allergen_status")
+  allergenNotes              String?               @map("allergen_notes")
+  addressStatus             AddressStatus          @map("address_status")
+  countryOfOriginStatus     CountryOfOriginStatus  @map("country_of_origin_status")
+  nutritionBoxStatus        NutritionBoxStatus     @map("nutrition_box_status")
+  labelsInStock             Int?                   @map("labels_in_stock")
+  urgency                   LabelUrgency
+  lastReviewedAt            DateTime?              @map("last_reviewed_at")
+  createdAt                 DateTime               @default(now()) @map("created_at")
+  updatedAt                 DateTime               @updatedAt @map("updated_at")
+
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([productId])
+  @@index([urgency])
+  @@map("label_compliance_records")
+}
+
+// ---------------------------------------------------------------------------
+// Orders
+// ---------------------------------------------------------------------------
+
+model Order {
+  id                  String        @id @default(cuid())
+  orderNumber         String        @unique @map("order_number")
+  source              OrderSource
+  wholesaleCustomerId String?       @map("wholesale_customer_id")
+  shopifyOrderId      String?       @unique @map("shopify_order_id")
+  region              Region
+  status              OrderStatus   @default(PENDING)
+  paymentPhase        PaymentPhase  @map("payment_phase")
+  paymentStatus       PaymentStatus @map("payment_status")
+  totalAmount         Decimal       @map("total_amount")
+  currency            String
+  placedAt            DateTime      @map("placed_at")
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+
+  wholesaleCustomer WholesaleCustomer? @relation(fields: [wholesaleCustomerId], references: [id])
+  lineItems         OrderLineItem[]
+  tasks             OrderTask[]
+
+  @@index([wholesaleCustomerId])
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderLineItem {
+  id        String   @id @default(cuid())
+  orderId   String   @map("order_id")
+  productId String   @map("product_id")
+  quantity  Int
+  unitPrice Decimal  @map("unit_price")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_line_items")
+}
+
+model OrderTask {
+  id                  String          @id @default(cuid())
+  orderId             String          @map("order_id")
+  stage               OrderTaskStage
+  status              OrderTaskStatus @default(PENDING)
+  assignedEmployeeId  String?         @map("assigned_employee_id")
+  startedAt           DateTime?       @map("started_at")
+  completedAt         DateTime?       @map("completed_at")
+  createdAt           DateTime        @default(now()) @map("created_at")
+  updatedAt           DateTime        @updatedAt @map("updated_at")
+
+  order            Order               @relation(fields: [orderId], references: [id])
+  assignedEmployee User?               @relation("OrderTaskAssignedEmployee", fields: [assignedEmployeeId], references: [id])
+  labourLogs       EmployeeLabourLog[]
+
+  @@index([orderId])
+  @@index([assignedEmployeeId])
+  @@index([status])
+  @@map("order_tasks")
+}
+
+// ---------------------------------------------------------------------------
+// Labour / sales / integrations
+// ---------------------------------------------------------------------------
+
+model EmployeeLabourLog {
+  id           String   @id @default(cuid())
+  employeeId   String   @map("employee_id")
+  date         DateTime
+  hoursWorked  Decimal  @map("hours_worked")
+  orderTaskId  String?  @map("order_task_id")
+  notes        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  employee  User       @relation(fields: [employeeId], references: [id])
+  orderTask OrderTask? @relation(fields: [orderTaskId], references: [id])
+
+  @@index([employeeId])
+  @@index([orderTaskId])
+  @@index([date])
+  @@map("employee_labour_logs")
+}
+
+model SalesLead {
+  id          String         @id @default(cuid())
+  companyName String         @map("company_name")
+  contactName String?        @map("contact_name")
+  email       String?
+  stage       SalesLeadStage @default(NEW)
+  source      String?
+  notes       String?
+  ownerUserId String         @map("owner_user_id")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  ownerUser User @relation("SalesLeadOwner", fields: [ownerUserId], references: [id])
+
+  @@index([ownerUserId])
+  @@index([email])
+  @@index([stage])
+  @@map("sales_leads")
+}
+
+model IntegrationSyncLog {
+  id             String                @id @default(cuid())
+  integration    IntegrationName
+  direction      IntegrationDirection
+  status         IntegrationSyncStatus
+  payloadSummary String?               @map("payload_summary")
+  errorMessage   String?               @map("error_message")
+  createdAt      DateTime              @default(now()) @map("created_at")
+
+  @@index([integration])
+  @@index([status])
+  @@map("integration_sync_logs")
+}
