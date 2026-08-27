@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 
-export function PinLoginForm() {
+export function PinLoginForm({ redirectTo }: { redirectTo: string }) {
   const [pin, setPin] = useState("");
   const [status, setStatus] = useState<"idle" | "checking" | "success" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
@@ -26,6 +26,9 @@ export function PinLoginForm() {
       }
       setStatus("success");
       setMessage(`Welcome, ${data.name}`);
+      // Full navigation (not client-side router) so the new session cookie
+      // is picked up by the server on the very next render.
+      window.location.href = redirectTo;
     } catch {
       setStatus("error");
       setMessage("Network error - please try again");

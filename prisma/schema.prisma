@@ -95,6 +95,11 @@ enum OrderTaskStatus {
   DONE
 }
 
+enum OrderTaskLineItemStatus {
+  PENDING
+  DONE
+}
+
 enum SalesLeadStage {
   NEW
   CONTACTED
@@ -372,6 +377,7 @@ model OrderLineItem {
 
   order   Order   @relation(fields: [orderId], references: [id])
   product Product @relation(fields: [productId], references: [id])
+  taskLineItem OrderTaskLineItem?
 
   @@index([orderId])
   @@index([productId])
@@ -392,11 +398,38 @@ model OrderTask {
   order            Order               @relation(fields: [orderId], references: [id])
   assignedEmployee User?               @relation("OrderTaskAssignedEmployee", fields: [assignedEmployeeId], references: [id])
   labourLogs       EmployeeLabourLog[]
+  lineItems        OrderTaskLineItem[]
 
   @@index([orderId])
   @@index([assignedEmployeeId])
   @@index([status])
   @@map("order_tasks")
+}
+
+/**
+ * One row per OrderLineItem, but only ever created for a LABELLING-stage
+ * OrderTask. Lets labelling be reorganized and batched by product across
+ * every pending order (the floor app's main screen), while still being
+ * able to tell, per order, when every one of its line items is done - which
+ * is what flips the parent LABELLING OrderTask to DONE and makes PACKING
+ * claimable for that order. PACKING and DISPATCH stay strictly per-order
+ * and don't get rows here.
+ */
+model OrderTaskLineItem {
+  id              String                   @id @default(cuid())
+  orderTaskId     String                   @map("order_task_id")
+  orderLineItemId String                   @unique @map("order_line_item_id")
+  status          OrderTaskLineItemStatus  @default(PENDING)
+  completedAt     DateTime?                @map("completed_at")
+  createdAt       DateTime                 @default(now()) @map("created_at")
+  updatedAt       DateTime                 @updatedAt @map("updated_at")
+
+  orderTask     OrderTask     @relation(fields: [orderTaskId], references: [id])
+  orderLineItem OrderLineItem @relation(fields: [orderLineItemId], references: [id])
+
+  @@index([orderTaskId])
+  @@index([status])
+  @@map("order_task_line_items")
 }
 
 // ---------------------------------------------------------------------------

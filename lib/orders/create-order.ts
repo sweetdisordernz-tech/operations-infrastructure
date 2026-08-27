@@ -152,6 +152,19 @@ export async function createOrder(input: CreateOrderInput): Promise<CreatedOrder
       include: { lineItems: true, tasks: true },
     });
 
+    // One OrderTaskLineItem per line item, attached to the LABELLING task
+    // only - this is what lets the floor app batch labelling by product
+    // across every pending order while still knowing, per order, when all
+    // of its line items are done. PACKING/DISPATCH stay per-order and never
+    // get child rows.
+    const labellingTask = order.tasks.find((task) => task.stage === "LABELLING")!;
+    await tx.orderTaskLineItem.createMany({
+      data: order.lineItems.map((lineItem) => ({
+        orderTaskId: labellingTask.id,
+        orderLineItemId: lineItem.id,
+      })),
+    });
+
     for (const [productId, qty] of productQtyDecrements) {
       await tx.inventoryItem.updateMany({
         where: { productId },

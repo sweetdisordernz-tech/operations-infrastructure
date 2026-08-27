@@ -155,3 +155,149 @@ a {
   text-align: center;
   font-size: 1.5rem;
 }
+
+/* Floor app - big tap targets, minimal chrome */
+
+.sd-floor-header {
+  padding: 1.25rem 1.5rem;
+  text-align: center;
+}
+
+.sd-floor-header h1 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--sd-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.sd-station-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  max-width: 28rem;
+}
+
+.sd-station-button {
+  display: block;
+  width: 100%;
+  background: var(--sd-panel);
+  border: 1px solid var(--sd-border);
+  border-radius: 1rem;
+  padding: 1.75rem 1.5rem;
+  text-align: center;
+  text-decoration: none;
+  color: var(--sd-text);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.sd-station-button:hover {
+  border-color: var(--sd-accent);
+  color: var(--sd-accent);
+}
+
+.sd-task-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.sd-task-card {
+  width: 100%;
+  max-width: 34rem;
+  background: var(--sd-panel);
+  border: 1px solid var(--sd-border);
+  border-radius: 1.25rem;
+  padding: 2.5rem 2rem;
+  text-align: center;
+}
+
+.sd-task-product {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 0 0 0.5rem;
+}
+
+.sd-task-meta {
+  color: var(--sd-text-dim);
+  font-size: 1.1rem;
+  margin: 0 0 1.5rem;
+}
+
+.sd-task-qty {
+  font-size: 4rem;
+  font-weight: 800;
+  color: var(--sd-accent);
+  line-height: 1;
+  margin: 0;
+}
+
+.sd-task-qty-label {
+  color: var(--sd-text-dim);
+  font-size: 1rem;
+  margin: 0.25rem 0 2rem;
+}
+
+.sd-task-order {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 1.5rem;
+}
+
+.sd-line-item-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 2rem;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sd-line-item-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  border-bottom: 1px solid var(--sd-border);
+  padding-bottom: 0.75rem;
+  font-size: 1.05rem;
+}
+
+.sd-line-item-qty {
+  font-weight: 700;
+  color: var(--sd-accent);
+  white-space: nowrap;
+}
+
+.sd-big-button {
+  display: block;
+  width: 100%;
+  background: var(--sd-accent);
+  border: none;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  color: #1a1a1a;
+  font-weight: 800;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+.sd-big-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sd-switch-station {
+  margin-top: 2rem;
+  font-size: 0.85rem;
+}
+
+.sd-switch-station a {
+  color: var(--sd-text-dim);
+}
