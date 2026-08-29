@@ -140,10 +140,11 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  magicLinkTokens    MagicLinkToken[]
-  assignedOrderTasks OrderTask[]         @relation("OrderTaskAssignedEmployee")
-  labourLogs         EmployeeLabourLog[]
-  ownedSalesLeads    SalesLead[]         @relation("SalesLeadOwner")
+  magicLinkTokens     MagicLinkToken[]
+  assignedOrderTasks  OrderTask[]          @relation("OrderTaskAssignedEmployee")
+  labourLogs          EmployeeLabourLog[]
+  ownedSalesLeads     SalesLead[]          @relation("SalesLeadOwner")
+  stockAdjustmentLogs StockAdjustmentLog[]
 
   @@map("users")
 }
@@ -338,11 +339,35 @@ model InventoryItem {
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
-  product  Product   @relation(fields: [productId], references: [id])
-  supplier Supplier? @relation(fields: [supplierId], references: [id])
+  product     Product              @relation(fields: [productId], references: [id])
+  supplier    Supplier?            @relation(fields: [supplierId], references: [id])
+  adjustments StockAdjustmentLog[]
 
   @@index([supplierId])
   @@map("inventory_items")
+}
+
+/**
+ * Audit trail for manual InventoryItem.quantityOnHand changes made from
+ * Master Connect (Section 9's "manual stock adjustment with audit trail").
+ * Order-driven decrements aren't logged here - only staff-initiated
+ * corrections, which is what "who changed this and when" is actually asking.
+ */
+model StockAdjustmentLog {
+  id               String   @id @default(cuid())
+  inventoryItemId  String   @map("inventory_item_id")
+  changedByUserId  String   @map("changed_by_user_id")
+  previousQuantity Int      @map("previous_quantity")
+  newQuantity      Int      @map("new_quantity")
+  reason           String?
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  changedByUser User          @relation(fields: [changedByUserId], references: [id])
+
+  @@index([inventoryItemId])
+  @@index([changedByUserId])
+  @@map("stock_adjustment_logs")
 }
 
 // ---------------------------------------------------------------------------

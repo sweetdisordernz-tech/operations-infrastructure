@@ -1,6 +1,16 @@
 import { readFileSync } from "fs";
 import { join } from "path";
-import { PrismaClient, PackagingType, Region, UserRole } from "@prisma/client";
+import {
+  PrismaClient,
+  PackagingType,
+  Region,
+  UserRole,
+  AllergenStatus,
+  AddressStatus,
+  CountryOfOriginStatus,
+  NutritionBoxStatus,
+  LabelUrgency,
+} from "@prisma/client";
 import { hashPin } from "../lib/auth/pin";
 
 const prisma = new PrismaClient();
@@ -130,6 +140,50 @@ function loadCatalog(): CatalogRow[] {
       packagingType,
       minOrderQty,
       filling: nullIfBlank(cells[fillingIdx]),
+    };
+  });
+}
+
+type LabelComplianceRow = {
+  name: string;
+  sku: string | null;
+  allergenStatus: AllergenStatus;
+  allergenNotes: string | null;
+  addressStatus: AddressStatus;
+  countryOfOriginStatus: CountryOfOriginStatus;
+  nutritionBoxStatus: NutritionBoxStatus;
+  labelsInStock: number | null;
+  urgency: LabelUrgency;
+};
+
+function loadLabelCompliance(): LabelComplianceRow[] {
+  const csvPath = join(__dirname, "data", "label-compliance.csv");
+  const content = readFileSync(csvPath, "utf8");
+  const [header, ...dataRows] = parseCsv(content);
+
+  const columnIndex = (name: string) => header.indexOf(name);
+  const nameIdx = columnIndex("name");
+  const skuIdx = columnIndex("sku");
+  const allergenStatusIdx = columnIndex("allergen_status");
+  const allergenNotesIdx = columnIndex("allergen_notes");
+  const addressStatusIdx = columnIndex("address_status");
+  const countryIdx = columnIndex("country_of_origin_status");
+  const nutritionIdx = columnIndex("nutrition_box_status");
+  const labelsInStockIdx = columnIndex("labels_in_stock");
+  const urgencyIdx = columnIndex("urgency");
+
+  return dataRows.map((cells) => {
+    const labelsInStockRaw = nullIfBlank(cells[labelsInStockIdx]);
+    return {
+      name: cells[nameIdx].trim(),
+      sku: nullIfBlank(cells[skuIdx]),
+      allergenStatus: cells[allergenStatusIdx].trim() as AllergenStatus,
+      allergenNotes: nullIfBlank(cells[allergenNotesIdx]),
+      addressStatus: cells[addressStatusIdx].trim() as AddressStatus,
+      countryOfOriginStatus: cells[countryIdx].trim() as CountryOfOriginStatus,
+      nutritionBoxStatus: cells[nutritionIdx].trim() as NutritionBoxStatus,
+      labelsInStock: labelsInStockRaw ? parseInt(labelsInStockRaw, 10) : null,
+      urgency: cells[urgencyIdx].trim() as LabelUrgency,
     };
   });
 }
@@ -337,6 +391,74 @@ async function main() {
     productCount++;
   }
   console.log(`Seeded ${productCount} products (+ inventory items + NZ Standard wholesale prices)`);
+
+  // -------------------------------------------------------------------------
+  // Label compliance records - matched to products by name (case/whitespace
+  // -insensitive), since most rows in the real compliance tracker have no
+  // sku to match on. Where a row does carry a sku, it's used to verify the
+  // name match rather than as the primary key. A catalog product with no
+  // matching compliance row simply gets no LabelComplianceRecord - never
+  // invented, per the "don't guess data that doesn't exist" rule used
+  // throughout this seed script.
+  // -------------------------------------------------------------------------
+  const complianceRows = loadLabelCompliance();
+  const allProducts = await prisma.product.findMany();
+  const productsByNormalizedName = new Map<string, typeof allProducts>();
+  for (const product of allProducts) {
+    const key = product.name.trim().toLowerCase();
+    const bucket = productsByNormalizedName.get(key) ?? [];
+    bucket.push(product);
+    productsByNormalizedName.set(key, bucket);
+  }
+
+  let complianceCount = 0;
+  for (const row of complianceRows) {
+    const matches = productsByNormalizedName.get(row.name.toLowerCase());
+    if (!matches || matches.length === 0) {
+      console.warn(`Label compliance: no product matches name "${row.name}" - skipping row`);
+      continue;
+    }
+    if (matches.length > 1) {
+      console.warn(
+        `Label compliance: ambiguous match for name "${row.name}" (${matches.length} products) - skipping row`,
+      );
+      continue;
+    }
+    const product = matches[0];
+    if (row.sku && product.sku && row.sku !== product.sku) {
+      console.warn(
+        `Label compliance: sku mismatch for "${row.name}" - CSV says ${row.sku}, product sku is ${product.sku} (using the name match anyway)`,
+      );
+    }
+
+    await prisma.labelComplianceRecord.upsert({
+      where: { id: `seed-compliance-${product.id}` },
+      update: {
+        allergenStatus: row.allergenStatus,
+        allergenNotes: row.allergenNotes,
+        addressStatus: row.addressStatus,
+        countryOfOriginStatus: row.countryOfOriginStatus,
+        nutritionBoxStatus: row.nutritionBoxStatus,
+        labelsInStock: row.labelsInStock,
+        urgency: row.urgency,
+        lastReviewedAt: new Date(),
+      },
+      create: {
+        id: `seed-compliance-${product.id}`,
+        productId: product.id,
+        allergenStatus: row.allergenStatus,
+        allergenNotes: row.allergenNotes,
+        addressStatus: row.addressStatus,
+        countryOfOriginStatus: row.countryOfOriginStatus,
+        nutritionBoxStatus: row.nutritionBoxStatus,
+        labelsInStock: row.labelsInStock,
+        urgency: row.urgency,
+        lastReviewedAt: new Date(),
+      },
+    });
+    complianceCount++;
+  }
+  console.log(`Seeded ${complianceCount} label compliance records (of ${complianceRows.length} CSV rows)`);
 
   // -------------------------------------------------------------------------
   // Wholesale customer, staff users

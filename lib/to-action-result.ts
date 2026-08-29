@@ -2,6 +2,7 @@ import { AuthError } from "@/lib/auth/guards";
 import { TaskGatingError } from "@/lib/tasks/shared";
 import { OrderValidationError } from "@/lib/orders/create-order";
 import { CheckoutError } from "@/lib/wholesale/checkout";
+import { AdminValidationError } from "@/lib/admin/errors";
 import type { ActionResult } from "@/lib/action-result";
 
 /**
@@ -21,7 +22,8 @@ export function toActionResult(err: unknown): ActionResult {
     err instanceof TaskGatingError ||
     err instanceof OrderValidationError ||
     err instanceof AuthError ||
-    err instanceof CheckoutError
+    err instanceof CheckoutError ||
+    err instanceof AdminValidationError
   ) {
     return { ok: false, error: err.message };
   }
