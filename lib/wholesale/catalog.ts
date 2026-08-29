@@ -20,6 +20,7 @@ export type WholesaleCatalogProduct = {
   fillingName: string | null;
   minOrderQty: number;
   price: number;
+  imageBlobUrl: string | null;
 };
 
 export type WholesaleCatalog = {
@@ -61,6 +62,7 @@ export async function getWholesaleCatalog(
     minOrderQty: product.minOrderQty,
     // Guaranteed present by the `some` filter above.
     price: Number(product.pricingTierProducts[0].price),
+    imageBlobUrl: product.imageBlobUrl,
   }));
 
   const ranges = [

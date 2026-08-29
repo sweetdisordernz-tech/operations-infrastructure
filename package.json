@@ -25,6 +25,7 @@
     "@vercel/blob": "^2.8.0",
     "bcryptjs": "^2.4.3",
     "bufferutil": "^4.1.0",
+    "lucide-react": "^1.37.0",
     "next": "15.5.24",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

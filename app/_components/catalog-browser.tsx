@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Minus, Plus, Check, Candy } from "lucide-react";
 import { useCart } from "@/app/_components/cart-context";
 import { formatPackagingType } from "@/lib/format";
 import type { WholesaleCatalog } from "@/lib/wholesale/catalog";
@@ -91,6 +92,14 @@ function ProductCard({ product }: { product: WholesaleCatalog["products"][number
 
   return (
     <div className="sd-product-card">
+      <div className="sd-product-image">
+        {product.imageBlobUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- Vercel Blob URLs, not a local/optimizable asset
+          <img src={product.imageBlobUrl} alt={product.name} />
+        ) : (
+          <Candy aria-hidden="true" size={32} />
+        )}
+      </div>
       <p className="sd-product-name">{product.name}</p>
       <p className="sd-product-meta">
         {formatPackagingType(product.packagingType)}
@@ -106,11 +115,11 @@ function ProductCard({ product }: { product: WholesaleCatalog["products"][number
             disabled={quantity <= product.minOrderQty}
             onClick={() => setQuantity((q) => Math.max(product.minOrderQty, q - 1))}
           >
-            −
+            <Minus size={16} aria-hidden="true" />
           </button>
           <span>{quantity}</span>
           <button type="button" aria-label="Increase quantity" onClick={() => setQuantity((q) => q + 1)}>
-            +
+            <Plus size={16} aria-hidden="true" />
           </button>
         </div>
         <button
@@ -122,7 +131,13 @@ function ProductCard({ product }: { product: WholesaleCatalog["products"][number
             setTimeout(() => setAdded(false), 1500);
           }}
         >
-          {added ? "Added ✓" : "Add"}
+          {added ? (
+            <>
+              <Check size={16} aria-hidden="true" /> Added
+            </>
+          ) : (
+            "Add"
+          )}
         </button>
       </div>
     </div>

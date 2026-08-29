@@ -50,7 +50,7 @@ export function PinLoginForm({ redirectTo }: { redirectTo: string }) {
       <button type="submit" disabled={status === "checking" || pin.length !== 4}>
         {status === "checking" ? "Checking..." : "Sign in"}
       </button>
-      {message && <p className="sd-note">{message}</p>}
+      {message && <p className={status === "error" ? "sd-action-error" : "sd-note"}>{message}</p>}
     </form>
   );
 }

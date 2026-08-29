@@ -63,7 +63,7 @@ export function MagicLinkLoginForm({
       <button type="submit" disabled={status === "sending"}>
         {status === "sending" ? "Sending..." : "Send sign-in link"}
       </button>
-      {status === "error" && <p className="sd-note">{message}</p>}
+      {status === "error" && <p className="sd-action-error">{message}</p>}
     </form>
   );
 }

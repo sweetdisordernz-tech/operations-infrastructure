@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
+import { Minus, Plus } from "lucide-react";
 import { useCart } from "@/app/_components/cart-context";
 import { formatPackagingType } from "@/lib/format";
 import type { WholesaleCatalog } from "@/lib/wholesale/catalog";
@@ -78,7 +79,7 @@ export function CartView({
                   disabled={item.quantity <= product.minOrderQty}
                   onClick={() => updateQuantity(item.productId, item.region, item.quantity - 1)}
                 >
-                  −
+                  <Minus size={16} aria-hidden="true" />
                 </button>
                 <span>{item.quantity}</span>
                 <button
@@ -86,7 +87,7 @@ export function CartView({
                   aria-label="Increase quantity"
                   onClick={() => updateQuantity(item.productId, item.region, item.quantity + 1)}
                 >
-                  +
+                  <Plus size={16} aria-hidden="true" />
                 </button>
               </div>
               {shipsToBothRegions && (

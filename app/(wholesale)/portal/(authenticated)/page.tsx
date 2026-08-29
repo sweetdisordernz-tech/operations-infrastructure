@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { Candy, ClipboardList } from "lucide-react";
 import { getCurrentWholesaleCustomer } from "@/lib/auth/current-user";
 import { getWholesaleCatalog } from "@/lib/wholesale/catalog";
 import { getReorderSuggestions } from "@/lib/wholesale/reorder";
@@ -28,9 +29,11 @@ export default async function PortalHome() {
           <h2>Get started</h2>
           <div className="sd-home-links">
             <Link className="sd-station-button" href="/catalog">
+              <Candy aria-hidden="true" />
               Browse catalog
             </Link>
             <Link className="sd-station-button" href="/orders">
+              <ClipboardList aria-hidden="true" />
               Order history
             </Link>
           </div>

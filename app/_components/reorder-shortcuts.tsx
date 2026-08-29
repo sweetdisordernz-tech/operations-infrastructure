@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Check } from "lucide-react";
 import { useCart } from "@/app/_components/cart-context";
 import { formatPackagingType } from "@/lib/format";
 import type { ReorderSuggestion } from "@/lib/wholesale/reorder";
@@ -35,7 +36,13 @@ export function ReorderShortcuts({ suggestions }: { suggestions: ReorderSuggesti
                   setAdded((prev) => new Set(prev).add(item.productId));
                 }}
               >
-                {isAdded ? "Added" : `+ Add ${item.avgQuantity}`}
+                {isAdded ? (
+                  <>
+                    <Check size={16} aria-hidden="true" /> Added
+                  </>
+                ) : (
+                  `+ Add ${item.avgQuantity}`
+                )}
               </button>
             </div>
           );

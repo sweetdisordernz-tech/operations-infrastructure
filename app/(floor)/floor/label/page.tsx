@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { Tag, CheckCircle2 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getNextLabellingBatch } from "@/lib/tasks/labelling";
 import { formatPackagingType } from "@/lib/format";
@@ -21,6 +22,7 @@ export default async function LabelPage() {
         <div className="sd-task-wrap">
           {batch ? (
             <div className="sd-task-card">
+              <Tag className="sd-task-icon" aria-hidden="true" />
               <p className="sd-task-product">
                 {batch.productName} — {formatPackagingType(batch.packagingType)}
                 {batch.fillingName ? ` — ${batch.fillingName}` : ""}
@@ -38,6 +40,7 @@ export default async function LabelPage() {
             </div>
           ) : (
             <div className="sd-task-card">
+              <CheckCircle2 className="sd-task-icon" aria-hidden="true" />
               <p className="sd-task-product">No tasks right now</p>
               <p className="sd-task-meta">Nothing pending for labelling. Nice work.</p>
             </div>

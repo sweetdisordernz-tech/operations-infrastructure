@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { Truck, CheckCircle2 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getNextDispatchOrder } from "@/lib/tasks/dispatch";
 import { TaskActionForm } from "@/app/_components/task-action-form";
@@ -21,6 +22,7 @@ export default async function DispatchPage() {
         <div className="sd-task-wrap">
           {order ? (
             <div className="sd-task-card">
+              <Truck className="sd-task-icon" aria-hidden="true" />
               <p className="sd-task-order">Order {order.orderNumber}</p>
               <OrderTaskLineItemList lineItems={order.lineItems} />
               <TaskActionForm
@@ -32,6 +34,7 @@ export default async function DispatchPage() {
             </div>
           ) : (
             <div className="sd-task-card">
+              <CheckCircle2 className="sd-task-icon" aria-hidden="true" />
               <p className="sd-task-product">No tasks right now</p>
               <p className="sd-task-meta">Nothing ready to dispatch. Nice work.</p>
             </div>
