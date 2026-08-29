@@ -40,7 +40,7 @@ export async function getMasterConnectSummary(): Promise<MasterConnectSummary> {
   ] = await Promise.all([
     prisma.order.count({ where: { source: "SHOPIFY", status: { not: "DISPATCHED" } } }),
     prisma.order.count({ where: { source: "WHOLESALE_PORTAL", status: { not: "DISPATCHED" } } }),
-    prisma.salesLead.count({ where: { stage: { notIn: ["WON", "LOST"] } } }),
+    prisma.salesLead.count({ where: { stage: { notIn: ["CLOSED_WON", "CLOSED_LOST"] } } }),
     latestIntegrationStatus("KLAVIYO"),
     latestIntegrationStatus("XERO"),
     prisma.product.count({ where: { active: true } }),

@@ -101,11 +101,27 @@ enum OrderTaskLineItemStatus {
 }
 
 enum SalesLeadStage {
-  NEW
-  CONTACTED
-  QUOTED
-  WON
-  LOST
+  SOURCE
+  QUALIFY
+  OUTREACH_SENT
+  NURTURE
+  PROPOSAL_SAMPLE_SENT
+  CLOSED_WON
+  CLOSED_LOST
+  RETAIN_REFERRAL
+}
+
+enum LeadSegment {
+  HR_WELLBEING_CULTURE
+  EVENT_MARKETING_AGENCY
+  SALES_TEAM_CLIENT_GIFTING
+  OTHER
+}
+
+enum EmailTemplateCategory {
+  EDM_SEQUENCE
+  COLD_OUTREACH
+  RESPONSE_SCENARIO
 }
 
 enum IntegrationName {
@@ -513,24 +529,104 @@ model EmployeeLabourLog {
   @@map("employee_labour_logs")
 }
 
+/**
+ * The corporate-gifting pipeline (brief Section 5.3/10.6). Schema matches
+ * the business's real lead tracker: an 8-stage pipeline (not a generic
+ * 5-stage CRM guess), a fixed segment enum, and last_touch_date tracked
+ * separately from updatedAt so editing a note doesn't count as a "touch".
+ */
 model SalesLead {
-  id          String         @id @default(cuid())
-  companyName String         @map("company_name")
-  contactName String?        @map("contact_name")
-  email       String?
-  stage       SalesLeadStage @default(NEW)
-  source      String?
-  notes       String?
-  ownerUserId String         @map("owner_user_id")
-  createdAt   DateTime       @default(now()) @map("created_at")
-  updatedAt   DateTime       @updatedAt @map("updated_at")
+  id               String         @id @default(cuid())
+  leadNumber       Int            @unique @default(autoincrement()) @map("lead_number")
+  companyName      String         @map("company_name")
+  contactName      String?        @map("contact_name")
+  email            String?
+  phone            String?
+  segment          LeadSegment
+  stage            SalesLeadStage @default(SOURCE)
+  source           String?
+  nextActionDate   DateTime?      @map("next_action_date")
+  nextAction       String?        @map("next_action")
+  estOrderValueNzd Decimal?       @map("est_order_value_nzd")
+  notes            String?
+  lastTouchDate    DateTime?      @map("last_touch_date")
+  ownerUserId      String         @map("owner_user_id")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
 
   ownerUser User @relation("SalesLeadOwner", fields: [ownerUserId], references: [id])
 
   @@index([ownerUserId])
   @@index([email])
   @@index([stage])
+  @@index([segment])
+  @@index([nextActionDate])
   @@map("sales_leads")
+}
+
+/**
+ * Send-ready corporate outreach copy (brief Section 5.3/10.6) - a
+ * read-only reference library Molly copies from, not something this
+ * platform sends. EDM rows are numbered 1-5 via sequencePosition;
+ * response-scenario rows use scenarioName instead; segment is null for
+ * copy written for a mixed list (e.g. the EDM sequence) rather than one
+ * specific segment.
+ */
+model EmailTemplate {
+  id               String                 @id @default(cuid())
+  category         EmailTemplateCategory
+  sequencePosition Int?                   @map("sequence_position")
+  segment          LeadSegment?
+  scenarioName     String?                @map("scenario_name")
+  sendTimingNotes  String?                @map("send_timing_notes")
+  subject          String
+  subjectAltHr     String?                @map("subject_alt_hr")
+  subjectAltAgency String?                @map("subject_alt_agency")
+  subjectAltSales  String?                @map("subject_alt_sales")
+  preheader        String?
+  body             String
+  ctaLabel         String?                @map("cta_label")
+  notes            String?
+  createdAt        DateTime               @default(now()) @map("created_at")
+  updatedAt        DateTime               @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@index([segment])
+  @@map("email_templates")
+}
+
+/**
+ * The seasonal outreach calendar (brief Section 5.3/10.6), sourced from
+ * the business's real "NZ Gifting Calendar". Dates are deliberately
+ * free text (approxTiming/triggerBy) since several shift yearly - never
+ * force these into rigid calendar dates. isAlwaysOn marks the one
+ * standing/non-seasonal row (Work Anniversaries).
+ */
+model GiftingOccasion {
+  id           String   @id @default(cuid())
+  occasionName String   @map("occasion_name")
+  approxTiming String   @map("approx_timing")
+  triggerBy    String   @map("trigger_by")
+  notes        String?
+  isAlwaysOn   Boolean  @default(false) @map("is_always_on")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("gifting_occasions")
+}
+
+/**
+ * The business's static corporate one-pager (brief Section 10.6) -
+ * hosted in Vercel Blob and linked from the Sales & Marketing dashboard.
+ * A single well-known row (id "singleton"), not a general asset library.
+ */
+model CorporateOnePager {
+  id        String   @id @default("singleton")
+  blobUrl   String?  @map("blob_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("corporate_one_pager")
 }
 
 model IntegrationSyncLog {
