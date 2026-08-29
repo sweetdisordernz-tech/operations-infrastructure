@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { AdminValidationError } from "@/lib/admin/errors";
+import { sendLabelComplianceAlertEmail } from "@/lib/email";
 import type {
   AllergenStatus,
   AddressStatus,
@@ -73,18 +74,55 @@ export type ComplianceUpdateInput = {
   urgency: LabelUrgency;
 };
 
+/** Plain-English summary of everything currently flagged wrong, for the urgency alert email. */
+function summarizeWhatsWrong(input: ComplianceUpdateInput): string {
+  const issues: string[] = [];
+  if (input.allergenStatus !== "CORRECT") {
+    issues.push(`Allergen labelling (${input.allergenStatus})${input.allergenNotes ? `: ${input.allergenNotes}` : ""}`);
+  }
+  if (input.addressStatus !== "CORRECT") issues.push("Address is incorrect");
+  if (input.countryOfOriginStatus !== "CORRECT") issues.push("Country of origin is incorrect");
+  if (input.nutritionBoxStatus !== "CORRECT") issues.push(`Nutrition box (${input.nutritionBoxStatus})`);
+  return issues.length > 0 ? issues.join("; ") : "Flagged top priority urgent";
+}
+
+/**
+ * Updates a compliance record and, only on a genuine transition INTO
+ * TOP_PRIORITY_URGENT (brief Section 6.4/12/14), alerts every active
+ * OWNER_ADMIN user - never on an edit that leaves an already-top-priority
+ * record at that same urgency, so routine re-saves don't re-alert.
+ */
 export async function updateComplianceRecord(id: string, input: ComplianceUpdateInput): Promise<void> {
   if (input.labelsInStock !== null && (!Number.isInteger(input.labelsInStock) || input.labelsInStock < 0)) {
     throw new AdminValidationError("Labels in stock must be a whole number of 0 or more, or left blank.");
   }
 
-  const existing = await prisma.labelComplianceRecord.findUnique({ where: { id } });
+  const existing = await prisma.labelComplianceRecord.findUnique({ where: { id }, include: { product: true } });
   if (!existing) {
     throw new AdminValidationError("That compliance record no longer exists.");
   }
+
+  const becameTopPriority = existing.urgency !== "TOP_PRIORITY_URGENT" && input.urgency === "TOP_PRIORITY_URGENT";
 
   await prisma.labelComplianceRecord.update({
     where: { id },
     data: { ...input, lastReviewedAt: new Date() },
   });
+
+  if (becameTopPriority) {
+    try {
+      const admins = await prisma.user.findMany({ where: { role: "OWNER_ADMIN", active: true } });
+      const whatsWrong = summarizeWhatsWrong(input);
+      for (const admin of admins) {
+        await sendLabelComplianceAlertEmail(admin.email, {
+          sku: existing.product.sku,
+          productName: existing.product.name,
+          whatsWrong,
+          labelsInStock: input.labelsInStock,
+        });
+      }
+    } catch (err) {
+      console.error(`Failed to send label-compliance urgency alert for record ${id}:`, err);
+    }
+  }
 }

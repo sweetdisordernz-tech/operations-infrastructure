@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/db";
+import { getReorderIdSnapshot, notifyIfNewReorderNeeded } from "@/lib/inventory/reorder";
+import { exportOrderToXero } from "@/lib/integrations/xero";
 import type {
   Order,
   OrderLineItem,
@@ -121,7 +123,13 @@ export async function createOrder(input: CreateOrderInput): Promise<CreatedOrder
     }
   }
 
-  return prisma.$transaction(async (tx) => {
+  // Captured before the decrement so the post-order state can be diffed for
+  // items that newly crossed their reorder threshold as a result of THIS
+  // order, rather than re-alerting on every order once something is
+  // already low (brief Section 6.4/14).
+  const reorderSnapshotBefore = await getReorderIdSnapshot();
+
+  const order = await prisma.$transaction(async (tx) => {
     const order = await tx.order.create({
       data: {
         orderNumber: input.orderNumber,
@@ -181,4 +189,12 @@ export async function createOrder(input: CreateOrderInput): Promise<CreatedOrder
 
     return order;
   });
+
+  // Side effects run after the transaction commits, never inside it - these
+  // are external calls (email, Blob) that must not hold a DB transaction
+  // open, and neither must ever block or fail the order that triggered them.
+  await notifyIfNewReorderNeeded(reorderSnapshotBefore);
+  await exportOrderToXero(order);
+
+  return order;
 }
