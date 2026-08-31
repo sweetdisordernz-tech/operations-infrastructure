@@ -771,6 +771,20 @@ async function main() {
     },
   });
 
+  // Real, checkable OWNER_ADMIN account for verifying the live deploy
+  // before DNS/subdomains are connected - additive, doesn't touch the
+  // molly@sweetdisorder.co.nz record above.
+  await prisma.user.upsert({
+    where: { email: "sweetdisordernz@gmail.com" },
+    update: { role: UserRole.OWNER_ADMIN, active: true },
+    create: {
+      email: "sweetdisordernz@gmail.com",
+      name: "Sweet Disorder",
+      role: UserRole.OWNER_ADMIN,
+      active: true,
+    },
+  });
+
   const employeePinHash = await hashPin("1234");
   await prisma.user.upsert({
     where: { email: "employee@sweetdisorder.co.nz" },

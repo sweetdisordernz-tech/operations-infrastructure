@@ -82,3 +82,33 @@ export function surfaceFromHost(host: string | null | undefined): Surface | null
 export function surfaceRootPath(surface: Surface): string {
   return SURFACE_PATH_PREFIX[surface];
 }
+
+/**
+ * Builds a link to another surface's home page, for use from a Server
+ * Component (reads the current request's `host` header via `next/headers`).
+ *
+ * When the current host is a real, recognized subdomain (production, once
+ * DNS is set up), returns a proper absolute URL on the target surface's own
+ * subdomain - e.g. "https://dashboard.sweetdisorder.co.nz" from
+ * "admin.sweetdisorder.co.nz" - so the address bar correctly reflects the
+ * surface you land on and the link is bookmarkable.
+ *
+ * When the host isn't a recognized subdomain (localhost, a Vercel preview
+ * URL, or before DNS is connected), falls back to the same-host
+ * `?surface=` query-param override middleware.ts already honors for local
+ * dev - so cross-surface links work correctly on a preview deployment too,
+ * without needing to know or guess the eventual production domain.
+ */
+export async function crossSurfaceHref(targetSurface: Surface): Promise<string> {
+  const { headers } = await import("next/headers");
+  const host = (await headers()).get("host");
+  const currentSurface = host ? surfaceFromHost(host) : null;
+
+  if (currentSurface && host) {
+    const rootDomainAndPort = host.split(".").slice(1).join(".");
+    const targetSubdomain = SURFACE_SUBDOMAINS[targetSurface];
+    return `https://${targetSubdomain}.${rootDomainAndPort}`;
+  }
+
+  return `/?surface=${targetSurface}`;
+}

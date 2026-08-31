@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { requireAdminPageUser } from "@/lib/admin/require-page-user";
 import { AdminNav } from "@/app/_components/admin-nav";
 import { LogoutButton } from "@/app/_components/logout-button";
+import { crossSurfaceHref } from "@/lib/subdomains";
 
 export default async function AdminAuthenticatedLayout({
   children,
@@ -8,13 +10,19 @@ export default async function AdminAuthenticatedLayout({
   children: React.ReactNode;
 }) {
   const user = await requireAdminPageUser();
+  const opsHref = await crossSurfaceHref("ops");
 
   return (
     <div className="sd-shell">
       <header className="sd-topbar">
-        <span className="sd-topbar-brand">Sweet Disorder Ops</span>
+        <Link className="sd-topbar-brand" href="/">
+          Sweet Disorder Ops
+        </Link>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
           <span className="sd-topbar-surface">Master Connect</span>
+          <a className="sd-topbar-switch" href={opsHref}>
+            Switch to Owner Dashboard
+          </a>
           <span className="sd-caption" style={{ margin: 0 }}>
             {user.name}
           </span>

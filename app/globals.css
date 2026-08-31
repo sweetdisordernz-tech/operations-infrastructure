@@ -164,6 +164,21 @@ h3,
 .sd-topbar-brand {
   font-family: var(--font-heading), sans-serif;
   font-weight: 400;
+  color: var(--sd-text);
+  text-decoration: none;
+}
+
+.sd-topbar-switch {
+  font-family: var(--font-ui), sans-serif;
+  font-size: 0.8125rem;
+  color: var(--sd-accent);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--sd-transition);
+}
+
+.sd-topbar-switch:hover {
+  border-bottom-color: var(--sd-accent);
 }
 
 .sd-topbar-surface {

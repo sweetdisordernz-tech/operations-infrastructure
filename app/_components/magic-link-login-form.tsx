@@ -44,8 +44,7 @@ export function MagicLinkLoginForm({
       <div>
         <p>{message}</p>
         <p className="sd-note">
-          Brevo isn&apos;t wired up yet in this stage, so the link is logged
-          to the server console instead of emailed.
+          Check your inbox (and spam folder) for the link - it should arrive within a minute or two.
         </p>
       </div>
     );
