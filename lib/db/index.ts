@@ -20,9 +20,17 @@ const globalForPrisma = globalThis as unknown as {
  * error page instead of ever reaching application code's own error
  * handling. Every request touches the DB, so this is the highest-value
  * place to have a bound, not just the external integrations.
+ *
+ * Connection timeout is deliberately more generous than the query timeout:
+ * Neon's free/serverless tier suspends its compute after idling, and the
+ * first connection after a suspend has to wake it back up, which can take
+ * noticeably longer than a normal connection. A bound that's too tight here
+ * turns a legitimate (if slow) cold start into a hard failure instead of
+ * just being a bit slow. Once actually connected, an individual query
+ * should be fast, so that bound can stay tighter.
  */
-const DB_CONNECTION_TIMEOUT_MS = 8_000;
-const DB_QUERY_TIMEOUT_MS = 8_000;
+const DB_CONNECTION_TIMEOUT_MS = 15_000;
+const DB_QUERY_TIMEOUT_MS = 10_000;
 
 function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL;

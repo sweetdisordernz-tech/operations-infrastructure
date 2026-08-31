@@ -31,20 +31,29 @@ const AUTH_DISABLED = true;
  * has been deactivated - callers never need to separately check `active`.
  */
 export async function getCurrentUser(): Promise<User | null> {
-  if (AUTH_DISABLED) {
-    const fallbackAdmin = await prisma.user.findFirst({
-      where: { email: "sweetdisordernz@gmail.com", active: true },
-    });
-    if (fallbackAdmin) return fallbackAdmin;
-    return prisma.user.findFirst({ where: { active: true }, orderBy: { createdAt: "asc" } });
+  // A DB hiccup here (e.g. a slow Neon cold start hitting the connection
+  // timeout in lib/db/index.ts) must never crash the whole page with an
+  // unhandled exception - fail safe to "not authenticated" instead, same as
+  // every other external-call failure mode in this project.
+  try {
+    if (AUTH_DISABLED) {
+      const fallbackAdmin = await prisma.user.findFirst({
+        where: { email: "sweetdisordernz@gmail.com", active: true },
+      });
+      if (fallbackAdmin) return fallbackAdmin;
+      return prisma.user.findFirst({ where: { active: true }, orderBy: { createdAt: "asc" } });
+    }
+
+    const userId = await readSessionSubject(STAFF_SESSION_COOKIE);
+    if (!userId) return null;
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.active) return null;
+    return user;
+  } catch (err) {
+    console.error("getCurrentUser: DB lookup failed, treating as signed out:", err);
+    return null;
   }
-
-  const userId = await readSessionSubject(STAFF_SESSION_COOKIE);
-  if (!userId) return null;
-
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user || !user.active) return null;
-  return user;
 }
 
 /**
@@ -53,12 +62,17 @@ export async function getCurrentUser(): Promise<User | null> {
  * invalid.
  */
 export async function getCurrentWholesaleCustomer(): Promise<WholesaleCustomer | null> {
-  if (AUTH_DISABLED) {
-    return prisma.wholesaleCustomer.findFirst({ orderBy: { createdAt: "asc" } });
+  try {
+    if (AUTH_DISABLED) {
+      return await prisma.wholesaleCustomer.findFirst({ orderBy: { createdAt: "asc" } });
+    }
+
+    const customerId = await readSessionSubject(WHOLESALE_SESSION_COOKIE);
+    if (!customerId) return null;
+
+    return await prisma.wholesaleCustomer.findUnique({ where: { id: customerId } });
+  } catch (err) {
+    console.error("getCurrentWholesaleCustomer: DB lookup failed, treating as signed out:", err);
+    return null;
   }
-
-  const customerId = await readSessionSubject(WHOLESALE_SESSION_COOKIE);
-  if (!customerId) return null;
-
-  return prisma.wholesaleCustomer.findUnique({ where: { id: customerId } });
 }
