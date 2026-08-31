@@ -1,0 +1,16 @@
+-- One-time corrective fix (2026-08-31): the Vercel Build Command's
+-- hardcoded `prisma migrate resolve --applied 20260827102400_add_pricing_and_shipping`
+-- incorrectly marked this migration as already applied without ever
+-- actually running it, leaving the production database missing
+-- wholesale_customers.ships_to_both_regions and the entire
+-- pricing_tier_products table. `migrate resolve --rolled-back` can't fix
+-- this (P3012 - it only works on a migration Prisma considers genuinely
+-- failed, not one it wrongly believes succeeded), so this deletes the
+-- bogus bookkeeping row directly. After this, `prisma migrate deploy`
+-- will see the migration as truly pending and run it for real.
+--
+-- Safe to run: this only touches Prisma's own migration-tracking table,
+-- never application data. Intended to be run exactly once, referenced
+-- directly from the Vercel Build Command - see the corrective one-time
+-- Build Command in the deploy notes for this fix.
+DELETE FROM "_prisma_migrations" WHERE migration_name = '20260827102400_add_pricing_and_shipping';
