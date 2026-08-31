@@ -5,24 +5,22 @@ import { usePathname } from "next/navigation";
 import { useCart } from "@/app/_components/cart-context";
 import { PORTAL_NAV_TABS } from "@/app/_components/portal-nav-tabs";
 
-/** Fixed bottom tab bar - mobile only (hidden at desktop widths via CSS, see PortalDesktopNav). */
-export function PortalBottomNav() {
+/** Horizontal nav embedded in the desktop header bar - hidden on mobile via CSS (see PortalBottomNav for the mobile equivalent). */
+export function PortalDesktopNav() {
   const pathname = usePathname();
   const { totalItemCount } = useCart();
 
   return (
-    <nav className="sd-bottom-nav" aria-label="Portal navigation">
+    <nav className="sd-portal-desktop-nav" aria-label="Portal navigation">
       {PORTAL_NAV_TABS.map(({ href, label, Icon }) => {
         const isActive = pathname === href;
         return (
           <Link key={href} href={href} className={isActive ? "active" : undefined}>
-            <span className="sd-bottom-nav-icon">
-              <Icon aria-hidden="true" />
-              {href === "/cart" && totalItemCount > 0 && (
-                <span className="sd-cart-badge">{totalItemCount}</span>
-              )}
-            </span>
+            <Icon aria-hidden="true" size={16} />
             {label}
+            {href === "/cart" && totalItemCount > 0 && (
+              <span className="sd-cart-badge sd-cart-badge-inline">{totalItemCount}</span>
+            )}
           </Link>
         );
       })}

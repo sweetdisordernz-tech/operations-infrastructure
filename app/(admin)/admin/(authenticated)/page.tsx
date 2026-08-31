@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ShoppingBag, Package, TrendingUp, Mail, Database, Receipt } from "lucide-react";
+import { ShoppingBag, TrendingUp, Mail, Database, Receipt } from "lucide-react";
 import { getMasterConnectSummary } from "@/lib/admin/dashboard";
 
 function formatSyncStatus(status: "SUCCESS" | "FAILURE" | "PARTIAL" | null, lastSyncAt: Date | null): string {
@@ -21,23 +21,29 @@ export default async function AdminHome() {
         </div>
       </div>
 
+      <div className="sd-hero-stat-row">
+        <Link href="/orders" className="sd-hero-stat">
+          <span className="sd-hero-stat-icon">
+            <ShoppingBag aria-hidden="true" size={34} />
+          </span>
+          <span className="sd-hero-stat-number">
+            {summary.shopifyOrdersAwaitingAction + summary.wholesaleOrdersAwaitingAction}
+          </span>
+          <span className="sd-hero-stat-label">Orders awaiting action</span>
+        </Link>
+        <div className="sd-hero-stat-breakdown">
+          <Link href="/orders?source=SHOPIFY" className="sd-hero-stat-chip">
+            <span className="sd-hero-stat-chip-number">{summary.shopifyOrdersAwaitingAction}</span>
+            <span className="sd-hero-stat-chip-label">Shopify</span>
+          </Link>
+          <Link href="/orders?source=WHOLESALE_PORTAL" className="sd-hero-stat-chip">
+            <span className="sd-hero-stat-chip-number">{summary.wholesaleOrdersAwaitingAction}</span>
+            <span className="sd-hero-stat-chip-label">Wholesale</span>
+          </Link>
+        </div>
+      </div>
+
       <div className="sd-tile-grid">
-        <Link href="/orders?source=SHOPIFY" className="sd-tile">
-          <span className="sd-tile-icon">
-            <ShoppingBag aria-hidden="true" size={26} />
-          </span>
-          <span className="sd-tile-number">{summary.shopifyOrdersAwaitingAction}</span>
-          <span className="sd-tile-label">Shopify orders awaiting action</span>
-        </Link>
-
-        <Link href="/orders?source=WHOLESALE_PORTAL" className="sd-tile">
-          <span className="sd-tile-icon">
-            <Package aria-hidden="true" size={26} />
-          </span>
-          <span className="sd-tile-number">{summary.wholesaleOrdersAwaitingAction}</span>
-          <span className="sd-tile-label">Wholesale orders awaiting action</span>
-        </Link>
-
         <a href={`/?surface=ops`} className="sd-tile">
           <span className="sd-tile-icon">
             <TrendingUp aria-hidden="true" size={26} />

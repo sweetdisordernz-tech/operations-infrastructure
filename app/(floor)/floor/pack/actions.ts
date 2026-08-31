@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { requireStaffUser } from "@/lib/auth/guards";
 import { completePackingTask } from "@/lib/tasks/packing";
 import type { ActionResult } from "@/lib/action-result";
@@ -18,6 +19,12 @@ export async function completePackingAction(
     }
 
     await completePackingTask(orderId, user.id);
+    // See the matching comment in floor/label/actions.ts: without this the
+    // same-tab UI keeps showing the just-completed order until a manual
+    // reload, because the bare-path (subdomain) and /floor-prefixed (dev)
+    // forms of this route need revalidating separately.
+    revalidatePath("/pack");
+    revalidatePath("/floor/pack");
     return { ok: true };
   } catch (err) {
     return toActionResult(err);

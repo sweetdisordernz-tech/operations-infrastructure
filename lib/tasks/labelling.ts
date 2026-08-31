@@ -14,6 +14,7 @@ export type LabellingBatch = {
   productName: string;
   packagingType: PackagingType;
   fillingName: string | null;
+  imageBlobUrl: string | null;
   totalQuantity: number;
   orderCount: number;
 };
@@ -25,6 +26,7 @@ export type PendingLabellingItem = {
     name: string;
     packagingType: PackagingType;
     filling: { name: string } | null;
+    imageBlobUrl: string | null;
   };
   order: { id: string; placedAt: Date };
 };
@@ -49,6 +51,7 @@ export function rankLabellingBatches(items: PendingLabellingItem[]): LabellingBa
         productName: product.name,
         packagingType: product.packagingType,
         fillingName: product.filling?.name ?? null,
+        imageBlobUrl: product.imageBlobUrl,
         totalQuantity: 0,
         orderCount: 0,
         orderIds: new Set(),
@@ -68,6 +71,7 @@ export function rankLabellingBatches(items: PendingLabellingItem[]): LabellingBa
       productName: group.productName,
       packagingType: group.packagingType,
       fillingName: group.fillingName,
+      imageBlobUrl: group.imageBlobUrl,
       totalQuantity: group.totalQuantity,
       orderCount: group.orderIds.size,
     }));

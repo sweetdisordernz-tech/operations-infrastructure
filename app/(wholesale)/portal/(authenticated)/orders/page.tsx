@@ -1,8 +1,11 @@
 import { redirect } from "next/navigation";
+import { ClipboardList } from "lucide-react";
 import { getCurrentWholesaleCustomer } from "@/lib/auth/current-user";
 import { getCustomerOrders } from "@/lib/wholesale/orders";
 import { OrderStepIndicator } from "@/app/_components/order-step-indicator";
 import { PortalBottomNav } from "@/app/_components/portal-bottom-nav";
+import { PortalHeader } from "@/app/_components/portal-header";
+import { PortalFooter } from "@/app/_components/portal-footer";
 
 export default async function OrdersPage() {
   const customer = await getCurrentWholesaleCustomer();
@@ -11,12 +14,13 @@ export default async function OrdersPage() {
 
   return (
     <div className="sd-portal-shell">
-      <div className="sd-portal-header">
-        <h1>Order history</h1>
-      </div>
+      <PortalHeader companyName={customer.companyName} title="Order history" />
       <div className="sd-portal-body">
         {orders.length === 0 ? (
-          <p className="sd-note">No orders yet - anything you place will show up here.</p>
+          <div className="sd-reorder-empty">
+            <ClipboardList aria-hidden="true" size={22} />
+            <p>No orders yet - anything you place will show up here.</p>
+          </div>
         ) : (
           orders.map((order) => (
             <div key={order.id} className="sd-order-card">
@@ -42,6 +46,7 @@ export default async function OrdersPage() {
           ))
         )}
       </div>
+      <PortalFooter />
       <PortalBottomNav />
     </div>
   );

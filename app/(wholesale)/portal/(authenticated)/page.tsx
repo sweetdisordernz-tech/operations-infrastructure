@@ -6,6 +6,8 @@ import { getWholesaleCatalog } from "@/lib/wholesale/catalog";
 import { getReorderSuggestions } from "@/lib/wholesale/reorder";
 import { ReorderShortcuts } from "@/app/_components/reorder-shortcuts";
 import { PortalBottomNav } from "@/app/_components/portal-bottom-nav";
+import { PortalHeader } from "@/app/_components/portal-header";
+import { PortalFooter } from "@/app/_components/portal-footer";
 
 export default async function PortalHome() {
   // Don't just trust the layout's redirect - Next can render a layout and
@@ -18,10 +20,12 @@ export default async function PortalHome() {
 
   return (
     <div className="sd-portal-shell">
-      <div className="sd-portal-header">
-        <h1>Hi {customer.contactName.split(" ")[0]}</h1>
-        <p>{customer.companyName}</p>
-      </div>
+      <PortalHeader
+        companyName={customer.companyName}
+        title={`Welcome back, ${customer.companyName}`}
+        subtitle={`Hi ${customer.contactName.split(" ")[0]}, here's what's happening with your account.`}
+        hero
+      />
       <div className="sd-portal-body">
         <ReorderShortcuts suggestions={suggestions} />
 
@@ -39,6 +43,7 @@ export default async function PortalHome() {
           </div>
         </div>
       </div>
+      <PortalFooter />
       <PortalBottomNav />
     </div>
   );

@@ -20,6 +20,7 @@ export type OrderForTask = {
     packagingType: PackagingType;
     fillingName: string | null;
     quantity: number;
+    imageBlobUrl: string | null;
   }>;
 };
 
@@ -55,8 +56,19 @@ export async function getNextOrderForStage(
       packagingType: lineItem.product.packagingType,
       fillingName: lineItem.product.filling?.name ?? null,
       quantity: lineItem.quantity,
+      imageBlobUrl: lineItem.product.imageBlobUrl,
     })),
   };
+}
+
+/** How many OrderTasks this employee has completed at this station today - the Floor App's "completed today" counter. */
+export async function getCompletedTodayCount(stage: OrderTaskStage, employeeId: string): Promise<number> {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  return prisma.orderTask.count({
+    where: { stage, status: "DONE", assignedEmployeeId: employeeId, completedAt: { gte: startOfToday } },
+  });
 }
 
 export class TaskGatingError extends Error {}

@@ -3,6 +3,8 @@ import { getCurrentWholesaleCustomer } from "@/lib/auth/current-user";
 import { getWholesaleCatalog } from "@/lib/wholesale/catalog";
 import { CartView } from "@/app/_components/cart-view";
 import { PortalBottomNav } from "@/app/_components/portal-bottom-nav";
+import { PortalHeader } from "@/app/_components/portal-header";
+import { PortalFooter } from "@/app/_components/portal-footer";
 
 export default async function CartPage() {
   const customer = await getCurrentWholesaleCustomer();
@@ -11,12 +13,11 @@ export default async function CartPage() {
 
   return (
     <div className="sd-portal-shell">
-      <div className="sd-portal-header">
-        <h1>Your cart</h1>
-      </div>
+      <PortalHeader companyName={customer.companyName} title="Your cart" />
       <div className="sd-portal-body">
         <CartView catalog={catalog} shipsToBothRegions={customer.shipsToBothRegions} />
       </div>
+      <PortalFooter />
       <PortalBottomNav />
     </div>
   );

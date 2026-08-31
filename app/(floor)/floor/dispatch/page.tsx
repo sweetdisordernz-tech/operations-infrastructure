@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Truck, CheckCircle2 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getNextDispatchOrder } from "@/lib/tasks/dispatch";
+import { getCompletedTodayCount } from "@/lib/tasks/shared";
 import { TaskActionForm } from "@/app/_components/task-action-form";
 import { OrderTaskLineItemList } from "@/app/_components/order-task-line-item-list";
 import { completeDispatchAction } from "./actions";
@@ -14,15 +15,23 @@ export default async function DispatchPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const order = await getNextDispatchOrder();
+  const [order, completedToday] = await Promise.all([
+    getNextDispatchOrder(),
+    getCompletedTodayCount("DISPATCH", user.id),
+  ]);
 
   return (
-    <div className="sd-shell">
+    <div className="sd-shell sd-shell--dispatch">
       <div className="sd-floor-header">
+        <span className="sd-floor-logo">Sweet Disorder</span>
         <h1>Dispatch</h1>
       </div>
       <main className="sd-main">
         <div className="sd-task-wrap">
+          <div className="sd-completed-today">
+            <span className="sd-completed-today-number">{completedToday}</span>
+            <span className="sd-completed-today-label">Completed today</span>
+          </div>
           {order ? (
             <div className="sd-task-card">
               <Truck className="sd-task-icon" aria-hidden="true" />

@@ -323,6 +323,81 @@ h3,
   color: var(--sd-text-dim);
 }
 
+.sd-floor-logo {
+  display: inline-block;
+  font-family: var(--font-heading), sans-serif;
+  font-size: 0.85rem;
+  color: var(--sd-text-dim);
+  margin-bottom: 0.35rem;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Station colours - bold, saturated, retro-candy-shop palette, deliberately */
+/* distinct from the restrained single-teal-accent rule everywhere else.   */
+/* Each floor task page sets one of these modifier classes on .sd-shell,   */
+/* and every station-scoped element below reads --sd-station-accent rather */
+/* than --sd-accent, so the whole screen (icon, big button, qty, counter,  */
+/* completion burst) shifts colour together depending which station you're */
+/* on - instant visual "which station am I in" recognition.                */
+/* ---------------------------------------------------------------------- */
+
+.sd-shell--label {
+  --sd-station-accent: #ff4f8b; /* hot pink */
+  --sd-station-accent-dark: #e0356e;
+}
+
+.sd-shell--pack {
+  --sd-station-accent: #ff9f1c; /* bright amber */
+  --sd-station-accent-dark: #e08600;
+}
+
+.sd-shell--dispatch {
+  --sd-station-accent: #7c5cfc; /* vivid purple */
+  --sd-station-accent-dark: #6440e0;
+}
+
+.sd-station-button.sd-station-button--label:hover,
+.sd-station-button.sd-station-button--label:hover svg {
+  border-color: #ff4f8b;
+  color: #ff4f8b;
+}
+
+.sd-station-button.sd-station-button--pack:hover,
+.sd-station-button.sd-station-button--pack:hover svg {
+  border-color: #ff9f1c;
+  color: #ff9f1c;
+}
+
+.sd-station-button.sd-station-button--dispatch:hover,
+.sd-station-button.sd-station-button--dispatch:hover svg {
+  border-color: #7c5cfc;
+  color: #7c5cfc;
+}
+
+.sd-completed-today {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  margin: 0 0 1.5rem;
+}
+
+.sd-completed-today-number {
+  font-family: var(--font-heading), sans-serif;
+  font-size: 3rem;
+  line-height: 1;
+  color: var(--sd-station-accent, var(--sd-accent));
+}
+
+.sd-completed-today-label {
+  font-family: var(--font-ui), sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--sd-text-dim);
+}
+
 .sd-station-grid {
   display: flex;
   flex-direction: column;
@@ -394,8 +469,25 @@ h3,
 .sd-task-icon {
   width: 3rem;
   height: 3rem;
-  color: var(--sd-accent);
+  color: var(--sd-station-accent, var(--sd-accent));
   margin: 0 auto 1rem;
+}
+
+.sd-task-photo {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  max-height: 22rem;
+  border-radius: var(--sd-radius-card);
+  border: 3px solid var(--sd-station-accent, var(--sd-accent));
+  overflow: hidden;
+  margin: 0 0 1.25rem;
+  background: var(--sd-bg-subtle);
+}
+
+.sd-task-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .sd-task-product {
@@ -415,7 +507,7 @@ h3,
 .sd-task-qty {
   font-family: var(--font-heading), sans-serif;
   font-size: 4rem;
-  color: var(--sd-accent);
+  color: var(--sd-station-accent, var(--sd-accent));
   line-height: 1;
   margin: 0;
 }
@@ -446,17 +538,40 @@ h3,
 .sd-line-item-list li {
   font-family: var(--font-body), sans-serif;
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 1rem;
+  align-items: center;
+  gap: 0.85rem;
   border-bottom: 1px solid var(--sd-border);
   padding-bottom: 0.75rem;
   font-size: 1.05rem;
 }
 
+.sd-line-item-photo {
+  flex-shrink: 0;
+  width: 3.25rem;
+  height: 3.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--sd-radius-card);
+  border: 2px solid var(--sd-station-accent, var(--sd-accent));
+  overflow: hidden;
+  background: var(--sd-bg-subtle);
+  color: var(--sd-gray-400);
+}
+
+.sd-line-item-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sd-line-item-text {
+  flex: 1;
+}
+
 .sd-line-item-qty {
   font-weight: 700;
-  color: var(--sd-accent);
+  color: var(--sd-station-accent, var(--sd-accent));
   white-space: nowrap;
 }
 
@@ -466,7 +581,7 @@ h3,
   justify-content: center;
   gap: 0.6rem;
   width: 100%;
-  background: var(--sd-accent);
+  background: var(--sd-station-accent, var(--sd-accent));
   border: none;
   border-radius: var(--sd-radius-sharp);
   padding: 1.4rem;
@@ -480,7 +595,7 @@ h3,
 }
 
 .sd-big-button:hover:not(:disabled) {
-  background: var(--sd-accent-dark);
+  background: var(--sd-station-accent-dark, var(--sd-accent-dark));
   box-shadow: var(--sd-shadow-card-hover);
 }
 
@@ -494,6 +609,66 @@ h3,
 .sd-big-button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Completion celebration - fires once per "mark done" tap, a full-screen  */
+/* colour-fill + bold checkmark burst in the current station's colour, so  */
+/* completing a task feels like a small win rather than a flat state       */
+/* change. Purely decorative/pointer-events:none - never blocks input or   */
+/* the next task's content, which is already loading underneath it.       */
+/* ---------------------------------------------------------------------- */
+
+@keyframes sd-celebrate-fill {
+  0% {
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.94;
+  }
+  75% {
+    opacity: 0.94;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes sd-celebrate-check {
+  0% {
+    transform: scale(0.25) rotate(-8deg);
+    opacity: 0;
+  }
+  45% {
+    transform: scale(1.2) rotate(4deg);
+    opacity: 1;
+  }
+  65% {
+    transform: scale(0.92) rotate(-2deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.sd-celebrate-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sd-station-accent, var(--sd-accent));
+  animation: sd-celebrate-fill 750ms ease forwards;
+  pointer-events: none;
+}
+
+.sd-celebrate-overlay svg {
+  color: var(--sd-white);
+  width: 7rem;
+  height: 7rem;
+  animation: sd-celebrate-check 750ms ease forwards;
 }
 
 .sd-switch-station {
@@ -613,6 +788,192 @@ h3,
   padding: 0 0.25rem;
 }
 
+.sd-cart-badge-inline {
+  position: static;
+  margin-left: 0.15rem;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Portal desktop chrome - topbar (logo/nav/company), hero, footer.        */
+/* Hidden below the desktop breakpoint; PortalBottomNav covers mobile nav  */
+/* and .sd-portal-header/.sd-portal-hero already read fine full-width on   */
+/* a phone, so only the desktop-specific rules live inside the query.      */
+/* ---------------------------------------------------------------------- */
+
+.sd-portal-topbar {
+  display: none;
+}
+
+.sd-portal-desktop-nav {
+  display: none;
+}
+
+.sd-portal-logo-mark {
+  font-family: var(--font-heading), sans-serif;
+  font-size: 1.25rem;
+  color: var(--sd-text);
+  text-decoration: none;
+}
+
+.sd-portal-company-chip {
+  font-family: var(--font-ui), sans-serif;
+  font-size: 0.8rem;
+  color: var(--sd-text-dim);
+  border: 1px solid var(--sd-border);
+  border-radius: var(--sd-radius-sharp);
+  padding: 0.35rem 0.85rem;
+  white-space: nowrap;
+}
+
+.sd-portal-hero {
+  padding: 2rem 1.25rem 1rem;
+}
+
+.sd-portal-hero-mark {
+  display: block;
+  font-family: var(--font-heading), sans-serif;
+  font-size: 0.95rem;
+  color: var(--sd-accent);
+  margin-bottom: 0.5rem;
+}
+
+.sd-portal-hero h1 {
+  font-family: var(--font-heading), sans-serif;
+  font-weight: 400;
+  font-size: 1.9rem;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.sd-portal-hero p {
+  font-family: var(--font-body), sans-serif;
+  color: var(--sd-text-dim);
+  margin: 0.6rem 0 0;
+  font-size: 1rem;
+  max-width: 32rem;
+}
+
+.sd-portal-footer {
+  margin-top: 2.5rem;
+  padding: 1.5rem 1.25rem 2rem;
+  border-top: 1px solid var(--sd-border);
+  text-align: center;
+}
+
+.sd-portal-footer-brand {
+  font-family: var(--font-heading), sans-serif;
+  font-size: 1rem;
+  color: var(--sd-text);
+  margin: 0 0 0.35rem;
+}
+
+.sd-portal-footer-contact {
+  font-family: var(--font-body), sans-serif;
+  font-size: 0.85rem;
+  color: var(--sd-text-dim);
+  margin: 0;
+}
+
+.sd-portal-footer-contact a {
+  color: var(--sd-text-dim);
+  text-decoration: underline;
+}
+
+.sd-reorder-empty {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  border: 1px dashed var(--sd-border);
+  border-radius: var(--sd-radius-card);
+  padding: 1.1rem 1.25rem;
+  color: var(--sd-text-dim);
+}
+
+.sd-reorder-empty svg {
+  flex-shrink: 0;
+  color: var(--sd-accent);
+}
+
+.sd-reorder-empty p {
+  font-family: var(--font-body), sans-serif;
+  font-size: 0.9rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+@media (min-width: 768px) {
+  .sd-portal-shell {
+    padding-bottom: 0; /* bottom nav is hidden at this width - the footer closes the page instead */
+  }
+
+  .sd-bottom-nav {
+    display: none;
+  }
+
+  .sd-portal-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding: 1.25rem 2rem;
+    border-bottom: 1px solid var(--sd-border);
+    max-width: 64rem;
+    margin: 0 auto;
+  }
+
+  .sd-portal-desktop-nav {
+    display: flex;
+    align-items: center;
+    gap: 1.75rem;
+  }
+
+  .sd-portal-desktop-nav a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: var(--font-ui), sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--sd-text-dim);
+    text-decoration: none;
+    transition: color var(--sd-transition);
+  }
+
+  .sd-portal-desktop-nav a:hover,
+  .sd-portal-desktop-nav a.active {
+    color: var(--sd-accent);
+  }
+
+  .sd-portal-header,
+  .sd-portal-hero,
+  .sd-portal-body,
+  .sd-portal-footer {
+    max-width: 64rem;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .sd-portal-hero {
+    padding: 3.5rem 2rem 1.5rem;
+  }
+
+  .sd-portal-hero-mark {
+    display: none; /* the topbar logo already covers this at desktop widths */
+  }
+
+  .sd-portal-hero h1 {
+    font-size: 3rem;
+  }
+
+  .sd-portal-header {
+    padding: 2rem 2rem 0.5rem;
+  }
+
+  .sd-portal-body {
+    padding: 0.5rem 2rem 1.5rem;
+  }
+}
+
 .sd-filter-row {
   display: flex;
   gap: 0.5rem;
@@ -652,6 +1013,14 @@ h3,
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .sd-product-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    gap: 1.25rem;
+  }
 }
 
 .sd-product-card {
@@ -1053,6 +1422,101 @@ h3,
 }
 
 /* Home tile grid */
+
+/* ---------------------------------------------------------------------- */
+/* Hero stat - the one clear focal point above the flat tile grid on the   */
+/* Master Connect / Owner Dashboard home pages. Same shape as .sd-tile but */
+/* deliberately larger and singular, so the page reads "here's the one     */
+/* number that matters today" before the supporting grid underneath.       */
+/* ---------------------------------------------------------------------- */
+
+.sd-hero-stat-row {
+  display: flex;
+  align-items: stretch;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.sd-hero-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  background: var(--sd-panel);
+  border: 1px solid var(--sd-border);
+  border-left: 4px solid var(--sd-accent);
+  border-radius: var(--sd-radius-card);
+  box-shadow: var(--sd-shadow-card);
+  padding: 1.75rem 2rem;
+  text-decoration: none;
+  color: var(--sd-text);
+  transition: box-shadow var(--sd-transition);
+  flex: 1 1 16rem;
+}
+
+.sd-hero-stat:hover {
+  box-shadow: var(--sd-shadow-card-hover);
+}
+
+.sd-hero-stat-icon {
+  display: inline-flex;
+  color: var(--sd-accent);
+}
+
+.sd-hero-stat-number {
+  font-family: var(--font-heading), sans-serif;
+  font-size: 3.5rem;
+  line-height: 1;
+}
+
+.sd-hero-stat-label {
+  font-family: var(--font-ui), sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--sd-text-dim);
+}
+
+.sd-hero-stat-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  flex: 0 0 12rem;
+}
+
+.sd-hero-stat-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+  background: var(--sd-panel);
+  border: 1px solid var(--sd-border);
+  border-radius: var(--sd-radius-card);
+  padding: 0.9rem 1.1rem;
+  text-decoration: none;
+  color: var(--sd-text);
+  transition: border-color var(--sd-transition);
+}
+
+.sd-hero-stat-chip:hover {
+  border-color: var(--sd-accent);
+}
+
+.sd-hero-stat-chip-number {
+  font-family: var(--font-heading), sans-serif;
+  font-size: 1.5rem;
+}
+
+.sd-hero-stat-chip-label {
+  font-family: var(--font-ui), sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--sd-text-dim);
+}
 
 .sd-tile-grid {
   display: grid;

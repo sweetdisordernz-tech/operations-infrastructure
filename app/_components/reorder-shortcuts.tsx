@@ -10,7 +10,20 @@ export function ReorderShortcuts({ suggestions }: { suggestions: ReorderSuggesti
   const { addItem } = useCart();
   const [added, setAdded] = useState<Set<string>>(new Set());
 
-  if (suggestions.length === 0) return null;
+  if (suggestions.length === 0) {
+    return (
+      <div className="sd-home-section">
+        <h2>Reorder your usuals</h2>
+        <div className="sd-reorder-empty">
+          <Check aria-hidden="true" size={22} />
+          <p>
+            Once you&apos;ve placed a couple of orders here, your regulars will show up in this
+            spot for a one-tap reorder.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="sd-home-section">

@@ -12,19 +12,20 @@ export default async function FloorHome() {
   return (
     <div className="sd-shell">
       <div className="sd-floor-header">
+        <span className="sd-floor-logo">Sweet Disorder</span>
         <h1>Sweet Disorder Floor</h1>
       </div>
       <main className="sd-main">
         <nav className="sd-station-grid" aria-label="Choose a station">
-          <a className="sd-station-button" href="/label">
+          <a className="sd-station-button sd-station-button--label" href="/label">
             <Tag aria-hidden="true" />
             Labelling &amp; filling
           </a>
-          <a className="sd-station-button" href="/pack">
+          <a className="sd-station-button sd-station-button--pack" href="/pack">
             <Package aria-hidden="true" />
             Packing
           </a>
-          <a className="sd-station-button" href="/dispatch">
+          <a className="sd-station-button sd-station-button--dispatch" href="/dispatch">
             <Truck aria-hidden="true" />
             Dispatch
           </a>

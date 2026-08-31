@@ -14,15 +14,17 @@ export default async function OpsHome() {
         </div>
       </div>
 
-      <div className="sd-tile-grid">
-        <Link href="/orders" className="sd-tile">
-          <span className="sd-tile-icon">
-            <ClipboardList aria-hidden="true" size={26} />
+      <div className="sd-hero-stat-row">
+        <Link href="/orders" className="sd-hero-stat">
+          <span className="sd-hero-stat-icon">
+            <ClipboardList aria-hidden="true" size={34} />
           </span>
-          <span className="sd-tile-number">{summary.ordersAwaitingAction}</span>
-          <span className="sd-tile-label">Orders awaiting action</span>
+          <span className="sd-hero-stat-number">{summary.ordersAwaitingAction}</span>
+          <span className="sd-hero-stat-label">Orders awaiting action</span>
         </Link>
+      </div>
 
+      <div className="sd-tile-grid">
         <Link href="/inventory" className="sd-tile">
           <span className="sd-tile-icon">
             <Package aria-hidden="true" size={26} />
