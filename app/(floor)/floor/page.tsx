@@ -2,6 +2,9 @@ import { redirect } from "next/navigation";
 import { Tag, Package, Truck } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/current-user";
 
+// Always render per-request (never statically prerendered at build time).
+export const dynamic = "force-dynamic";
+
 export default async function FloorHome() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");

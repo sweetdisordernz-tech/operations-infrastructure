@@ -7,6 +7,9 @@ import { TaskActionForm } from "@/app/_components/task-action-form";
 import { OrderTaskLineItemList } from "@/app/_components/order-task-line-item-list";
 import { completeDispatchAction } from "./actions";
 
+// Always render per-request (never statically prerendered at build time).
+export const dynamic = "force-dynamic";
+
 export default async function DispatchPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");

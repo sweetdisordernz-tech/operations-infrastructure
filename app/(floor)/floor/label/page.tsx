@@ -7,6 +7,9 @@ import { formatPackagingType } from "@/lib/format";
 import { TaskActionForm } from "@/app/_components/task-action-form";
 import { completeLabellingBatchAction } from "./actions";
 
+// Always render per-request (never statically prerendered at build time).
+export const dynamic = "force-dynamic";
+
 export default async function LabelPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");

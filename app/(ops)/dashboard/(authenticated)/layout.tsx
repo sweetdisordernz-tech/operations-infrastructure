@@ -4,6 +4,11 @@ import { OpsNav } from "@/app/_components/ops-nav";
 import { LogoutButton } from "@/app/_components/logout-button";
 import { crossSurfaceHref } from "@/lib/subdomains";
 
+// Always render per-request (never statically prerendered at build time) -
+// this page shows live per-user, per-request business data regardless of
+// how the current user is resolved.
+export const dynamic = "force-dynamic";
+
 export default async function OpsAuthenticatedLayout({
   children,
 }: {
