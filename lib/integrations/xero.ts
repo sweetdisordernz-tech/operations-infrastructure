@@ -2,6 +2,7 @@ import { put } from "@vercel/blob";
 import { prisma } from "@/lib/db";
 import { sendXeroExportEmail } from "@/lib/email";
 import type { CreatedOrder } from "@/lib/orders/create-order";
+import type { Region } from "@prisma/client";
 
 /**
  * Xero-format order export (brief Section 6.2). The business's actual
@@ -11,20 +12,30 @@ import type { CreatedOrder } from "@/lib/orders/create-order";
  * stores a copy in Vercel Blob as the audit trail, and emails it to the
  * OWNER_ADMIN user(s) as the actual delivery mechanism.
  *
- * AccountCode "200" and TaxType "15% GST on Income" are NZ-standard
- * placeholders, NOT a verified match to the business's real Xero chart of
- * accounts - flagged again in the email body, and worth double-checking
- * before anyone relies on the export for real bookkeeping. AU-region
- * orders in particular likely need a different (zero-rated/GST-free) tax
- * type once that's confirmed - this stage applies the same placeholder to
- * every order rather than guessing a second value.
+ * AccountCode "200" and both TaxType values below are UNVERIFIED
+ * placeholders - not a confirmed match to the business's real Xero chart
+ * of accounts. Flagged again in the email body. Confirm all three (the
+ * account code and both tax type names) against the real chart of
+ * accounts before relying on this export for actual bookkeeping.
  */
 
 const XERO_CSV_HEADER =
   "*ContactName,EmailAddress,*InvoiceNumber,*InvoiceDate,*DueDate,InventoryItemCode,Description,*Quantity,*UnitAmount,*AccountCode,*TaxType,Currency";
 
 const ACCOUNT_CODE = "200";
-const TAX_TYPE = "15% GST on Income";
+
+/**
+ * Per-region TaxType, so correcting either value (once confirmed against
+ * the real Xero chart of accounts) is a one-line change here rather than a
+ * code change elsewhere. NZ-registered business selling into NZ uses
+ * standard GST on income; AU is treated as a zero-rated export sale - a
+ * reasonable default, not a verified one.
+ */
+const TAX_TYPE_BY_REGION: Record<Region, string> = {
+  NZ: "15% GST on Income",
+  AU: "Zero Rated",
+};
+
 const DUE_DAYS_AFTER_INVOICE = 14;
 
 function csvField(value: string | number): string {
@@ -53,6 +64,7 @@ export function generateXeroInvoiceCsv(params: {
   invoiceDate: Date;
   dueDate: Date;
   currency: string;
+  taxType: string;
   lineItems: XeroLineItem[];
 }): string {
   const rows = params.lineItems.map((item) =>
@@ -67,7 +79,7 @@ export function generateXeroInvoiceCsv(params: {
       csvField(item.quantity),
       csvField(item.unitAmount.toFixed(2)),
       csvField(ACCOUNT_CODE),
-      csvField(TAX_TYPE),
+      csvField(params.taxType),
       csvField(params.currency),
     ].join(","),
   );
@@ -139,6 +151,7 @@ export async function exportOrderToXero(order: CreatedOrder): Promise<void> {
       invoiceDate: order.placedAt,
       dueDate,
       currency: order.currency,
+      taxType: TAX_TYPE_BY_REGION[order.region],
       lineItems: order.lineItems.map((li) => {
         const product = productById.get(li.productId);
         return {

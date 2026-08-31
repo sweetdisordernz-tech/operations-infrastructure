@@ -164,7 +164,7 @@ export function sendXeroExportEmail(to: string, orderNumber: string, csvBase64: 
   return sendEmail({
     to,
     subject: `Xero export - order ${orderNumber}`,
-    text: `Hi,\n\nAttached is the Xero-format sales invoice CSV for order ${orderNumber}, ready to import via Xero's bulk-import Sales Invoices flow.\n\nAccount code and tax type are NZ-standard placeholders (200 / 15% GST on Income) - please confirm these against the real chart of accounts before relying on them.\n\n- Sweet Disorder Ops`,
+    text: `Hi,\n\nAttached is the Xero-format sales invoice CSV for order ${orderNumber}, ready to import via Xero's bulk-import Sales Invoices flow.\n\nAccount code (200) and tax type (15% GST on Income for NZ orders, Zero Rated for AU orders) are unverified placeholders - please confirm all three against the real chart of accounts before relying on them.\n\n- Sweet Disorder Ops`,
     attachment: { name: `${orderNumber}.csv`, contentBase64: csvBase64 },
   });
 }
