@@ -14,6 +14,7 @@ import {
   LeadSegment,
 } from "@prisma/client";
 import { hashPin } from "../lib/auth/pin";
+import { backfillProductImages } from "../lib/products/image-backfill";
 
 const prisma = new PrismaClient();
 
@@ -810,6 +811,33 @@ async function main() {
     });
   }
   console.log(`Seeded ${EMAIL_TEMPLATES.length} email templates`);
+
+  // -------------------------------------------------------------------------
+  // Product image backfill - pulls real photos from the live Shopify
+  // storefront (sweetdisorder.co.nz/products.json) and matches them to our
+  // Product rows by exact normalized name. Idempotent (skips any product
+  // that already has imageBlobUrl set) and never throws - a network failure
+  // here must never block the rest of the seed. See lib/products/image-backfill.ts.
+  // -------------------------------------------------------------------------
+  const imageBackfill = await backfillProductImages(prisma);
+  console.log(
+    `Product image backfill: ${imageBackfill.matchedAndUpdated} matched and updated, ` +
+      `${imageBackfill.alreadyHadImage} already had an image, ` +
+      `${imageBackfill.matchedButFailed.length} matched but failed to download/upload, ` +
+      `${imageBackfill.unmatched.length} unmatched.`,
+  );
+  if (imageBackfill.matchedButFailed.length > 0) {
+    console.log("  Matched but failed (network/upload error, will retry next seed run):");
+    for (const { name, reason } of imageBackfill.matchedButFailed) {
+      console.log(`    - ${name}: ${reason}`);
+    }
+  }
+  if (imageBackfill.unmatched.length > 0) {
+    console.log("  No confident match on the live site (expected for seasonal/internal-only items):");
+    for (const name of imageBackfill.unmatched) {
+      console.log(`    - ${name}`);
+    }
+  }
 
   console.log("Seed complete.");
 }
