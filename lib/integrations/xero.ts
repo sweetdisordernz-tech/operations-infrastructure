@@ -38,6 +38,9 @@ const TAX_TYPE_BY_REGION: Record<Region, string> = {
 
 const DUE_DAYS_AFTER_INVOICE = 14;
 
+/** Same reasoning as BREVO_TIMEOUT_MS in lib/email/index.ts - an unbounded put() against a stalled endpoint can run the whole function past Vercel's execution limit instead of ever reaching this file's own try/catch. */
+const BLOB_UPLOAD_TIMEOUT_MS = 8000;
+
 function csvField(value: string | number): string {
   const str = String(value);
   if (/[",\n]/.test(str)) {
@@ -114,6 +117,7 @@ async function uploadXeroCsvToBlob(orderNumber: string, csv: string): Promise<st
     const blob = await put(`xero-exports/${orderNumber}.csv`, csv, {
       access: "public",
       contentType: "text/csv",
+      abortSignal: AbortSignal.timeout(BLOB_UPLOAD_TIMEOUT_MS),
     });
     return blob.url;
   } catch (err) {

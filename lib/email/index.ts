@@ -13,6 +13,20 @@ import { prisma } from "@/lib/db";
 const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 const SENDER_NAME = "Sweet Disorder";
 
+/**
+ * Plain fetch() has no default timeout - against a stalled/slow endpoint it
+ * hangs indefinitely, which on Vercel means the whole serverless function
+ * runs past its execution limit and gets killed by the platform, returning
+ * Vercel's own (non-JSON) error page instead of ever reaching this
+ * function's own try/catch. That's a different failure mode than "Brevo
+ * returned an error" or "fetch rejected" - both of which were already
+ * handled - and it's why a bounded signal is required here, not optional.
+ * Kept short because sendEmail can run several times in a row in a single
+ * request (e.g. one alert per OWNER_ADMIN), so the timeout budget is
+ * shared across a loop, not just a single call.
+ */
+const BREVO_TIMEOUT_MS = 5000;
+
 type SendEmailInput = {
   to: string;
   subject: string;
@@ -72,6 +86,7 @@ export async function sendEmail({ to, subject, text, attachment }: SendEmailInpu
           ? { attachment: [{ name: attachment.name, content: attachment.contentBase64 }] }
           : {}),
       }),
+      signal: AbortSignal.timeout(BREVO_TIMEOUT_MS),
     });
 
     if (!response.ok) {
