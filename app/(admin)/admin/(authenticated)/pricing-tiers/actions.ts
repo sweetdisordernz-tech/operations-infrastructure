@@ -14,11 +14,20 @@ import { toActionResult } from "@/lib/to-action-result";
 import type { ActionResult } from "@/lib/action-result";
 import type { Region } from "@prisma/client";
 
+function parseMinimumOrderValue(formData: FormData): number | null {
+  const raw = String(formData.get("minimumOrderValue") ?? "").trim();
+  return raw ? Number(raw) : null;
+}
+
 export async function createPricingTierAction(_prevState: ActionResult, formData: FormData): Promise<ActionResult> {
   let newId: string;
   try {
     await requireStaffUser(["OWNER_ADMIN"]);
-    const tier = await createPricingTier(String(formData.get("name") ?? ""), String(formData.get("region") ?? "") as Region);
+    const tier = await createPricingTier(
+      String(formData.get("name") ?? ""),
+      String(formData.get("region") ?? "") as Region,
+      parseMinimumOrderValue(formData),
+    );
     revalidatePath("/pricing-tiers");
     newId = tier.id;
   } catch (err) {
@@ -31,7 +40,12 @@ export async function updatePricingTierAction(_prevState: ActionResult, formData
   try {
     await requireStaffUser(["OWNER_ADMIN"]);
     const id = String(formData.get("id") ?? "");
-    await updatePricingTier(id, String(formData.get("name") ?? ""), String(formData.get("region") ?? "") as Region);
+    await updatePricingTier(
+      id,
+      String(formData.get("name") ?? ""),
+      String(formData.get("region") ?? "") as Region,
+      parseMinimumOrderValue(formData),
+    );
     revalidatePath("/pricing-tiers");
     revalidatePath(`/pricing-tiers/${id}`);
     return { ok: true };

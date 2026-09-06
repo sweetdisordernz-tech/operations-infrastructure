@@ -92,7 +92,22 @@ const PACKAGING_TYPE_MAP: Record<string, PackagingType> = {
   Stand: PackagingType.STAND,
   Bag: PackagingType.BAG,
   Candle: PackagingType.CANDLE,
+  Badge: PackagingType.BADGE,
+  Mug: PackagingType.MUG,
+  Ring: PackagingType.RING,
+  Box: PackagingType.BOX,
 };
+
+/**
+ * Same map, but for the merch.csv/PACKAGING_TYPE columns that come in
+ * already-uppercase (BADGE, RING, etc, matching the enum directly) rather
+ * than the Title Case used by catalog.csv/new-ranges.csv. Reuses
+ * PACKAGING_TYPE_MAP's values so there's exactly one place that lists the
+ * valid packaging types.
+ */
+const UPPERCASE_PACKAGING_TYPE_MAP: Record<string, PackagingType> = Object.fromEntries(
+  Object.values(PackagingType).map((value) => [value, value]),
+);
 
 // No real SKU series exists yet for Christmas products - assumed prefix.
 const RANGE_SKU_PREFIXES: Record<string, string> = {
@@ -223,6 +238,100 @@ function loadProductImages(): ManualProductImage[] {
   }));
 }
 
+type WholesalePricingRow = {
+  name: string;
+  sku: string | null;
+  priceNz: number;
+  priceAu: number | null;
+};
+
+/**
+ * Real NZ + AU wholesale prices for existing catalog products, matched by
+ * Product.name (never by sku - AU uses a completely different prefix
+ * scheme, e.g. "SDP81" NZ vs no AU equivalent at all for some products, or
+ * a badge's "SDAB09" NZ vs "ASDAB09" AU). The sku column here is kept only
+ * to cross-check against the product's own stored sku and warn on a
+ * mismatch - see the seeding loop below - never used as the match key.
+ * A blank price_au means no AU price exists for that product; that tier's
+ * PricingTierProduct row is simply not created; never invented.
+ */
+function loadWholesalePricing(): WholesalePricingRow[] {
+  const csvPath = join(__dirname, "data", "wholesale-pricing-lolly.csv");
+  const content = readFileSync(csvPath, "utf8");
+  const [header, ...dataRows] = parseCsv(content);
+
+  const nameIdx = header.indexOf("name");
+  const skuIdx = header.indexOf("sku");
+  const priceNzIdx = header.indexOf("price_nz");
+  const priceAuIdx = header.indexOf("price_au");
+
+  return dataRows.map((cells) => {
+    const priceAuRaw = cells[priceAuIdx]?.trim();
+    return {
+      name: cells[nameIdx].trim(),
+      sku: nullIfBlank(cells[skuIdx]),
+      priceNz: Number(cells[priceNzIdx].trim()),
+      priceAu: priceAuRaw ? Number(priceAuRaw) : null,
+    };
+  });
+}
+
+type MerchRow = {
+  range: string;
+  name: string;
+  packagingType: PackagingType;
+  skuNz: string | null;
+  priceNz: number;
+  skuAu: string | null;
+  priceAu: number | null;
+  imageUrl: string | null;
+};
+
+/**
+ * The merch line (badges, mugs, keyrings, first-aid kits) - a real
+ * non-confectionery category, unlike every other range in this file: no
+ * Filling, and a genuinely different set of PackagingType values (BADGE,
+ * MUG, RING, plus the existing BAG/STAND for first-aid bags and bulk
+ * display stands). Priced and photographed in the same pass, unlike the
+ * lolly catalog's separate price/image steps, since none of this existed
+ * before now. All wholesale_visible: false, pending review - see the
+ * seeding loop below.
+ */
+function loadMerch(): MerchRow[] {
+  const csvPath = join(__dirname, "data", "merch.csv");
+  const content = readFileSync(csvPath, "utf8");
+  const [header, ...dataRows] = parseCsv(content);
+
+  const rangeIdx = header.indexOf("range");
+  const nameIdx = header.indexOf("name");
+  const packagingIdx = header.indexOf("packaging");
+  const skuNzIdx = header.indexOf("sku_nz");
+  const priceNzIdx = header.indexOf("price_nz");
+  const skuAuIdx = header.indexOf("sku_au");
+  const priceAuIdx = header.indexOf("price_au");
+  const imageUrlIdx = header.indexOf("image_url");
+
+  return dataRows.map((cells, rowNumber) => {
+    const packagingRaw = cells[packagingIdx]?.trim();
+    const packagingType = UPPERCASE_PACKAGING_TYPE_MAP[packagingRaw];
+    if (!packagingType) {
+      throw new Error(`merch.csv row ${rowNumber + 2}: unknown packaging "${packagingRaw}"`);
+    }
+    const priceAuRaw = cells[priceAuIdx]?.trim();
+
+    return {
+      range: cells[rangeIdx].trim(),
+      name: cells[nameIdx].trim(),
+      packagingType,
+      skuNz: nullIfBlank(cells[skuNzIdx]),
+      priceNz: Number(cells[priceNzIdx].trim()),
+      skuAu: nullIfBlank(cells[skuAuIdx]),
+      priceAu: priceAuRaw ? Number(priceAuRaw) : null,
+      imageUrl: nullIfBlank(cells[imageUrlIdx]),
+    };
+  });
+}
+
 type LabelComplianceRow = {
   name: string;
   sku: string | null;
@@ -273,11 +382,12 @@ function randomInt(min: number, max: number): number {
 
 // Plausible wholesale unit prices by packaging type, for seed/test data only
 // - Molly will set real pricing later. Tins are sold in 4-packs
-// (min_order_qty), so priced lower per unit than a bottle/jar. BAG and
-// CANDLE are never actually looked up here - the new-ranges loop below
-// deliberately skips PricingTierProduct entirely for those (no pricing
-// yet) - these two entries exist only so this stays a complete Record and
-// compiles; update them once Molly has real numbers.
+// (min_order_qty), so priced lower per unit than a bottle/jar. Only
+// BOTTLE/JAR/TIN/STAND are ever actually looked up here (catalog.csv is
+// the only caller, and it only uses those four) - every other entry exists
+// purely so this stays a complete Record and compiles; update with real
+// numbers if any of those ranges end up using this random-placeholder path
+// instead of real pricing data.
 const WHOLESALE_PRICE_RANGE_BY_PACKAGING: Record<PackagingType, [number, number]> = {
   [PackagingType.BOTTLE]: [6, 8],
   [PackagingType.JAR]: [9, 11],
@@ -285,6 +395,10 @@ const WHOLESALE_PRICE_RANGE_BY_PACKAGING: Record<PackagingType, [number, number]
   [PackagingType.STAND]: [120, 160],
   [PackagingType.BAG]: [5, 7],
   [PackagingType.CANDLE]: [12, 16],
+  [PackagingType.BADGE]: [4, 5],
+  [PackagingType.MUG]: [8, 10],
+  [PackagingType.RING]: [3, 4],
+  [PackagingType.BOX]: [15, 25],
 };
 
 function wholesalePriceFor(packagingType: PackagingType): number {
@@ -651,13 +765,32 @@ async function main() {
   console.log(`Seeded ${fillingByName.size} distinct fillings (deduped, case-normalized)`);
 
   // -------------------------------------------------------------------------
-  // Pricing tier (created before products so each product can get a
-  // PricingTierProduct row in the same pass below)
+  // Pricing tiers (created before products so each product can get a
+  // PricingTierProduct row in the same pass below). Two separate tiers, one
+  // per region - Molly maintains these as two separate wholesale
+  // price-list documents, not two backends; there's still only one
+  // sweetdisorder.co.nz storefront and one shared set of product photos.
+  // NZ carries a real $300 minimum order value; AU currently has none.
   // -------------------------------------------------------------------------
   const pricingTier = await prisma.pricingTier.upsert({
     where: { id: "seed-pricing-tier-nz-standard" },
-    update: { name: "NZ Standard Wholesale", region: Region.NZ },
-    create: { id: "seed-pricing-tier-nz-standard", name: "NZ Standard Wholesale", region: Region.NZ },
+    update: { name: "NZ Standard Wholesale", region: Region.NZ, minimumOrderValue: 300.0 },
+    create: {
+      id: "seed-pricing-tier-nz-standard",
+      name: "NZ Standard Wholesale",
+      region: Region.NZ,
+      minimumOrderValue: 300.0,
+    },
+  });
+  const auPricingTier = await prisma.pricingTier.upsert({
+    where: { id: "seed-pricing-tier-au-standard" },
+    update: { name: "AU Standard Wholesale", region: Region.AU, minimumOrderValue: null },
+    create: {
+      id: "seed-pricing-tier-au-standard",
+      name: "AU Standard Wholesale",
+      region: Region.AU,
+      minimumOrderValue: null,
+    },
   });
 
   // -------------------------------------------------------------------------
@@ -815,6 +948,167 @@ async function main() {
   );
 
   // -------------------------------------------------------------------------
+  // Real NZ + AU wholesale pricing for the existing 98-SKU lolly catalog -
+  // matched by Product.name only, never by the CSV's own sku column (AU
+  // uses a completely different prefix scheme - e.g. no direct AU
+  // equivalent for most SDP-prefixed products at all). The sku column is
+  // used only to sanity-check against the product's already-stored sku and
+  // warn on a mismatch, same pattern as the label-compliance loop above. A
+  // blank price_au in the source data means no AU price exists yet - that
+  // product simply gets no AU PricingTierProduct row, never a guessed one.
+  // -------------------------------------------------------------------------
+  const wholesalePricing = loadWholesalePricing();
+  let lollyNzPriced = 0;
+  let lollyAuPriced = 0;
+  const lollyPricingUnmatched: string[] = [];
+
+  for (const row of wholesalePricing) {
+    const product = await prisma.product.findFirst({ where: { name: row.name } });
+    if (!product) {
+      lollyPricingUnmatched.push(row.name);
+      continue;
+    }
+    if (row.sku && product.sku && row.sku !== product.sku) {
+      console.warn(
+        `Wholesale pricing: sku mismatch for "${row.name}" - CSV says ${row.sku}, product sku is ${product.sku} (pricing by name anyway)`,
+      );
+    }
+
+    await prisma.pricingTierProduct.upsert({
+      where: { pricingTierId_productId: { pricingTierId: pricingTier.id, productId: product.id } },
+      update: { price: row.priceNz },
+      create: { pricingTierId: pricingTier.id, productId: product.id, price: row.priceNz },
+    });
+    lollyNzPriced++;
+
+    if (row.priceAu !== null) {
+      await prisma.pricingTierProduct.upsert({
+        where: { pricingTierId_productId: { pricingTierId: auPricingTier.id, productId: product.id } },
+        update: { price: row.priceAu },
+        create: { pricingTierId: auPricingTier.id, productId: product.id, price: row.priceAu },
+      });
+      lollyAuPriced++;
+    }
+  }
+  console.log(
+    `Seeded real wholesale pricing for ${lollyNzPriced} lolly products (NZ) / ${lollyAuPriced} (AU), ` +
+      `of ${wholesalePricing.length} CSV rows` +
+      (lollyPricingUnmatched.length > 0
+        ? ` - ${lollyPricingUnmatched.length} unmatched: ${lollyPricingUnmatched.join(", ")}`
+        : ""),
+  );
+
+  // -------------------------------------------------------------------------
+  // Merch line (badges, mugs, keyrings, first-aid kits) - a real
+  // non-confectionery category: no Filling, wholesale_visible false
+  // pending review, priced and photographed together since none of it
+  // existed before this pass. Matched on (range, name) - every merch item
+  // is either skuless (Product.sku = null) or, when the CSV gives an NZ
+  // sku, keyed on that; the CSV's separate AU sku column has no home in
+  // the schema (Product has one sku field) and is only used for the
+  // mismatch warning below, same treatment as the lolly pricing loop.
+  //
+  // KNOWN DATA ISSUE, not silently corrected: the source data gives
+  // "Mum of the Year" (sku_nz SDAB13) and "Perfect" (sku_nz SDAB12) the
+  // *same* AU sku, ASDAB12 - almost certainly "Mum of the Year" should be
+  // ASDAB13 to match its own NZ numbering, but that's a guess, not a fact,
+  // so both are seeded exactly as given. Neither AU sku is stored in a
+  // unique DB column (see above), so this doesn't trip a constraint - it's
+  // purely a source-data inconsistency to flag for Molly to confirm.
+  // -------------------------------------------------------------------------
+  const merchRows = loadMerch();
+  const merchRangeByName = new Map<string, { id: string }>();
+  const MERCH_RANGE_SKU_PREFIXES: Record<string, string> = {
+    "Auto Ego Keyrings": "AEK",
+    "Award Badges": "SDAB",
+    "First Aid Kits": "SDFAB",
+    "Insulated Mugs": "SDIM",
+  };
+  let merchProductCount = 0;
+  let merchNzPriced = 0;
+  let merchAuPriced = 0;
+  const merchImages: ManualProductImage[] = [];
+
+  for (const row of merchRows) {
+    let range = merchRangeByName.get(row.range);
+    if (!range) {
+      const skuPrefix = MERCH_RANGE_SKU_PREFIXES[row.range];
+      if (!skuPrefix) throw new Error(`merch.csv: no sku_prefix configured for range "${row.range}"`);
+      const id = `seed-range-${skuPrefix}`;
+      range = await prisma.productRange.upsert({
+        where: { id },
+        update: { name: row.range, skuPrefix },
+        create: { id, name: row.range, skuPrefix },
+      });
+      merchRangeByName.set(row.range, range);
+    }
+
+    const product = row.skuNz
+      ? await prisma.product.upsert({
+          where: { sku: row.skuNz },
+          update: { name: row.name, rangeId: range.id, packagingType: row.packagingType, wholesaleVisible: false },
+          create: {
+            sku: row.skuNz,
+            name: row.name,
+            rangeId: range.id,
+            packagingType: row.packagingType,
+            minOrderQty: 1,
+            wholesaleVisible: false,
+          },
+        })
+      : await (async () => {
+          const existing = await prisma.product.findFirst({
+            where: { rangeId: range.id, name: row.name, sku: null },
+          });
+          if (existing) {
+            return prisma.product.update({
+              where: { id: existing.id },
+              data: { packagingType: row.packagingType, wholesaleVisible: false },
+            });
+          }
+          return prisma.product.create({
+            data: {
+              sku: null,
+              name: row.name,
+              rangeId: range.id,
+              packagingType: row.packagingType,
+              minOrderQty: 1,
+              wholesaleVisible: false,
+            },
+          });
+        })();
+
+    await prisma.inventoryItem.upsert({
+      where: { productId: product.id },
+      update: {},
+      create: { productId: product.id, quantityOnHand: 0 },
+    });
+
+    await prisma.pricingTierProduct.upsert({
+      where: { pricingTierId_productId: { pricingTierId: pricingTier.id, productId: product.id } },
+      update: { price: row.priceNz },
+      create: { pricingTierId: pricingTier.id, productId: product.id, price: row.priceNz },
+    });
+    merchNzPriced++;
+
+    if (row.priceAu !== null) {
+      await prisma.pricingTierProduct.upsert({
+        where: { pricingTierId_productId: { pricingTierId: auPricingTier.id, productId: product.id } },
+        update: { price: row.priceAu },
+        create: { pricingTierId: auPricingTier.id, productId: product.id, price: row.priceAu },
+      });
+      merchAuPriced++;
+    }
+
+    if (row.imageUrl) merchImages.push({ name: row.name, imageUrl: row.imageUrl });
+    merchProductCount++;
+  }
+  console.log(
+    `Seeded ${merchRangeByName.size} merch ranges (${merchProductCount} products, ` +
+      `${merchNzPriced} NZ-priced / ${merchAuPriced} AU-priced, all wholesale_visible: false pending review)`,
+  );
+
+  // -------------------------------------------------------------------------
   // Label compliance records - matched to products by name (case/whitespace
   // -insensitive), since most rows in the real compliance tracker have no
   // sku to match on. Where a row does carry a sku, it's used to verify the
@@ -969,13 +1263,14 @@ async function main() {
 
   // -------------------------------------------------------------------------
   // Manual product image backfill - real photos from specific live-site
-  // pages someone reviewed directly (prisma/data/product-images.csv), as
-  // opposed to the automated products.json feed match below. Runs first and
-  // is treated as authoritative (overwrites any imageBlobUrl already set),
-  // so a confirmed-correct manual photo always wins over a possibly-wrong
+  // pages someone reviewed directly (prisma/data/product-images.csv, plus
+  // merch.csv's own image_url column merged in here), as opposed to the
+  // automated products.json feed match below. Runs first and is treated as
+  // authoritative (overwrites any imageBlobUrl already set), so a
+  // confirmed-correct manual photo always wins over a possibly-wrong
   // automated match. See lib/products/image-backfill.ts.
   // -------------------------------------------------------------------------
-  const manualImages = loadProductImages();
+  const manualImages = [...loadProductImages(), ...merchImages];
   const manualBackfill = await applyManualProductImages(prisma, manualImages);
   console.log(
     `Manual product image backfill: ${manualBackfill.matchedAndUpdated} matched and updated, ` +
@@ -989,8 +1284,7 @@ async function main() {
     }
   }
   if (manualBackfill.unmatched.length > 0) {
-    console.log("  No product in the catalog matches this name (expected for the merch line, which");
-    console.log("  has photos ready here but no product records yet - see the request writeup):");
+    console.log("  No product in the catalog matches this name:");
     for (const name of manualBackfill.unmatched) {
       console.log(`    - ${name}`);
     }

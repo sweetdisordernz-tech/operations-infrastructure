@@ -18,18 +18,29 @@ export async function getPricingTier(id: string) {
   });
 }
 
-export async function createPricingTier(name: string, region: Region) {
+export async function createPricingTier(name: string, region: Region, minimumOrderValue: number | null) {
   const trimmed = name.trim();
   if (!trimmed) throw new AdminValidationError("Pricing tier name is required.");
-  return prisma.pricingTier.create({ data: { name: trimmed, region } });
+  if (minimumOrderValue !== null && (!Number.isFinite(minimumOrderValue) || minimumOrderValue < 0)) {
+    throw new AdminValidationError("Minimum order value must be a number of 0 or more, or left blank.");
+  }
+  return prisma.pricingTier.create({ data: { name: trimmed, region, minimumOrderValue } });
 }
 
-export async function updatePricingTier(id: string, name: string, region: Region) {
+export async function updatePricingTier(
+  id: string,
+  name: string,
+  region: Region,
+  minimumOrderValue: number | null,
+) {
   const trimmed = name.trim();
   if (!trimmed) throw new AdminValidationError("Pricing tier name is required.");
+  if (minimumOrderValue !== null && (!Number.isFinite(minimumOrderValue) || minimumOrderValue < 0)) {
+    throw new AdminValidationError("Minimum order value must be a number of 0 or more, or left blank.");
+  }
   const existing = await prisma.pricingTier.findUnique({ where: { id } });
   if (!existing) throw new AdminValidationError("That pricing tier no longer exists.");
-  await prisma.pricingTier.update({ where: { id }, data: { name: trimmed, region } });
+  await prisma.pricingTier.update({ where: { id }, data: { name: trimmed, region, minimumOrderValue } });
 }
 
 export async function deletePricingTier(id: string) {

@@ -1023,12 +1023,38 @@ h3,
   }
 }
 
+/*
+ * Catalog browsing grid - distinct from .sd-product-list above (still used
+ * by the cart, which is a vertical list of order lines, not a photo grid).
+ * Matches the real site's actual card structure: a dominant 4:5 portrait
+ * photo with minimal chrome below it, not a small thumbnail competing with
+ * text. 2 columns on mobile, 3 at tablet width, 4 at desktop width.
+ */
+.sd-catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .sd-catalog-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+}
+
+@media (min-width: 1100px) {
+  .sd-catalog-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
 .sd-product-card {
   background: var(--sd-white);
   border: 1px solid var(--sd-border);
   border-radius: var(--sd-radius-sharp); /* real site's product cards are sharp-cornered, not the dense-dashboard 6px */
   box-shadow: var(--sd-shadow-card);
-  padding: 1rem;
+  padding: 0.6rem;
   transition: box-shadow var(--sd-transition);
 }
 
@@ -1038,7 +1064,7 @@ h3,
 
 .sd-product-image {
   width: 100%;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 4 / 5;
   border-radius: var(--sd-radius-card);
   background: var(--sd-bg-subtle);
   border: 1px solid var(--sd-border);
@@ -1046,7 +1072,7 @@ h3,
   align-items: center;
   justify-content: center;
   color: var(--sd-gray-400);
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
   overflow: hidden;
 }
 
@@ -1063,11 +1089,21 @@ h3,
   margin: 0;
 }
 
+.sd-catalog-grid .sd-product-name {
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+
 .sd-product-meta {
   font-family: var(--font-body), sans-serif;
   color: var(--sd-text-dim);
   font-size: 0.85rem;
   margin: 0.25rem 0 0.6rem;
+}
+
+.sd-catalog-grid .sd-product-meta {
+  font-size: 0.75rem;
+  margin: 0.15rem 0 0.4rem;
 }
 
 .sd-product-row {
@@ -1077,11 +1113,20 @@ h3,
   gap: 0.75rem;
 }
 
+.sd-catalog-grid .sd-product-row {
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
 .sd-product-price {
   font-family: var(--font-ui), sans-serif;
   font-weight: 800;
   font-size: 1.1rem;
   color: var(--sd-text);
+}
+
+.sd-catalog-grid .sd-product-price {
+  font-size: 0.95rem;
 }
 
 .sd-qty-stepper {
@@ -1157,6 +1202,27 @@ h3,
 .sd-add-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Compact chrome for the catalog grid's narrower 2-4 column cards. */
+.sd-catalog-grid .sd-qty-stepper {
+  gap: 0.3rem;
+}
+
+.sd-catalog-grid .sd-qty-stepper button {
+  width: 1.85rem;
+  height: 1.85rem;
+  font-size: 1rem;
+}
+
+.sd-catalog-grid .sd-qty-stepper span {
+  min-width: 1.3rem;
+  font-size: 0.9rem;
+}
+
+.sd-catalog-grid .sd-add-btn {
+  padding: 0.4rem 0.7rem;
+  font-size: 0.85rem;
 }
 
 .sd-cart-line {

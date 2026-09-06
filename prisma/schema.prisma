@@ -32,6 +32,10 @@ enum PackagingType {
   STAND
   BAG
   CANDLE
+  BADGE
+  MUG
+  RING
+  BOX
 }
 
 enum AllergenStatus {
@@ -195,11 +199,18 @@ model WholesaleCustomer {
 }
 
 model PricingTier {
-  id        String   @id @default(cuid())
-  name      String
-  region    Region
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id     String  @id @default(cuid())
+  name   String
+  region Region
+  /**
+   * Lowest order subtotal (in this tier's region currency) that checkout
+   * will accept, enforced per-region-order in lib/wholesale/checkout.ts -
+   * null means no minimum. Molly's NZ price list carries a real $300
+   * minimum; the AU list currently has none.
+   */
+  minimumOrderValue Decimal? @map("minimum_order_value")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   wholesaleCustomers WholesaleCustomer[]
   products           PricingTierProduct[]

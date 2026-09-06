@@ -75,7 +75,7 @@ export function CatalogBrowser({ catalog }: { catalog: WholesaleCatalog }) {
         </div>
       )}
 
-      <div className="sd-product-list">
+      <div className="sd-catalog-grid">
         {filtered.map((product) => (
           <ProductCard key={product.productId} product={product} />
         ))}

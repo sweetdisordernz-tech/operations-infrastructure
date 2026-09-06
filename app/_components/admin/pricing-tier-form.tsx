@@ -18,7 +18,7 @@ export function PricingTierForm({
   tier,
 }: {
   action: (prevState: ActionResult, formData: FormData) => Promise<ActionResult>;
-  tier?: { id: string; name: string; region: "NZ" | "AU" };
+  tier?: { id: string; name: string; region: "NZ" | "AU"; minimumOrderValue: number | null };
 }) {
   const [state, formAction] = useActionState<ActionResult, FormData>(action, INITIAL_ACTION_RESULT);
 
@@ -36,6 +36,18 @@ export function PricingTierForm({
             <option value="NZ">NZ</option>
             <option value="AU">AU</option>
           </select>
+        </div>
+        <div className="sd-field">
+          <label htmlFor="minimumOrderValue">Minimum order value</label>
+          <input
+            id="minimumOrderValue"
+            type="number"
+            name="minimumOrderValue"
+            min="0"
+            step="0.01"
+            placeholder="No minimum"
+            defaultValue={tier?.minimumOrderValue ?? ""}
+          />
         </div>
       </div>
       <div className="sd-form-actions">

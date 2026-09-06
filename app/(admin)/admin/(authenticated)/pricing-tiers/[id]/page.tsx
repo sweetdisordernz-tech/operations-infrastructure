@@ -38,7 +38,15 @@ export default async function EditPricingTierPage({ params }: { params: Promise<
       </div>
 
       <div className="sd-panel">
-        <PricingTierForm action={updatePricingTierAction} tier={{ id: tier.id, name: tier.name, region: tier.region }} />
+        <PricingTierForm
+          action={updatePricingTierAction}
+          tier={{
+            id: tier.id,
+            name: tier.name,
+            region: tier.region,
+            minimumOrderValue: tier.minimumOrderValue !== null ? Number(tier.minimumOrderValue) : null,
+          }}
+        />
       </div>
 
       <div className="sd-panel">

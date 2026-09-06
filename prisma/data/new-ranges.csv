@@ -10,6 +10,7 @@ Astrology Range,AST,true,Bag,Scorpio
 Astrology Range,AST,true,Bag,Sagittarius
 Astrology Range,AST,true,Bag,Capricorn
 Astrology Range,AST,true,Bag,Aquarius
+Astrology Range,AST,true,Bag,Pisces
 Hunting & Fishing Range,HFR,true,Bag,Cod Help Me
 Hunting & Fishing Range,HFR,true,Bag,Pitch Me Up
 Hunting & Fishing Range,HFR,true,Bag,Nature Calls
@@ -25,3 +26,10 @@ Garden Range,GDN,false,Bag,Pot Head
 Scent Dispensary,CND,false,Candle,For Fart Sake Candle
 Scent Dispensary,CND,false,Candle,Shit Happens Candle
 Scent Dispensary,CND,false,Candle,Toxic Socks Soy Candle
+Gift Boxes,GFB,false,Box,Best Friend Gift Box
+Gift Boxes,GFB,false,Box,Birthday Gift Box
+Gift Boxes,GFB,false,Box,Box of Love
+Gift Boxes,GFB,false,Box,Box of Shit
+Valentine's Range,VAL,false,Bottle,BFF Formula
+Valentine's Range,VAL,false,Bottle,Break Up Blues Busters
+Valentine's Range,VAL,false,Bottle,Romance Revivers

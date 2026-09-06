@@ -78,6 +78,10 @@ export function ProductForm({
             <option value="STAND">Stand</option>
             <option value="BAG">Bag</option>
             <option value="CANDLE">Candle</option>
+            <option value="BADGE">Badge</option>
+            <option value="MUG">Mug</option>
+            <option value="RING">Ring</option>
+            <option value="BOX">Box</option>
           </select>
         </div>
 
