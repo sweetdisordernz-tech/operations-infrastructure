@@ -6,6 +6,7 @@ import { getNextPackingOrder } from "@/lib/tasks/packing";
 import { getCompletedTodayCount } from "@/lib/tasks/shared";
 import { TaskActionForm } from "@/app/_components/task-action-form";
 import { OrderTaskLineItemList } from "@/app/_components/order-task-line-item-list";
+import { FloorHeader } from "@/app/_components/floor-header";
 import { completePackingAction } from "./actions";
 
 // Always render per-request (never statically prerendered at build time).
@@ -22,10 +23,7 @@ export default async function PackPage() {
 
   return (
     <div className="sd-shell sd-shell--pack">
-      <div className="sd-floor-header">
-        <span className="sd-floor-logo">Sweet Disorder</span>
-        <h1>Packing</h1>
-      </div>
+      <FloorHeader title="Packing" />
       <main className="sd-main">
         <div className="sd-task-wrap">
           <div className="sd-completed-today">

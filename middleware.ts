@@ -29,6 +29,21 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Reserved escape hatch, reachable from inside any surface (see
+  // SwitchAppLink): clears the dev-override cookie and sends the browser
+  // back to "/" on the same host. Handled before any surface resolution so
+  // it works regardless of which surface set the cookie in the first
+  // place - without this, once the cookie is set there is no way back to
+  // the picker short of manually clearing cookies or editing the URL.
+  if (pathname === "/switch-app") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    url.search = "";
+    const response = NextResponse.redirect(url);
+    response.cookies.delete(SURFACE_COOKIE_NAME);
+    return response;
+  }
+
   const host = request.headers.get("host");
   let surface: Surface | null = surfaceFromHost(host);
 

@@ -318,6 +318,13 @@ h3,
   text-align: center;
 }
 
+.sd-floor-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.35rem;
+}
+
 .sd-floor-header h1 {
   font-size: 1.1rem;
   color: var(--sd-text-dim);
@@ -328,7 +335,6 @@ h3,
   font-family: var(--font-heading), sans-serif;
   font-size: 0.85rem;
   color: var(--sd-text-dim);
-  margin-bottom: 0.35rem;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -680,6 +686,26 @@ h3,
   color: var(--sd-text-dim);
 }
 
+/*
+ * The one "back to the four-surface picker" link, used identically in all
+ * four surfaces (see SwitchAppLink) - small and muted so it never competes
+ * with a page's real primary actions, same visual language as
+ * .sd-topbar-switch and .sd-switch-station above.
+ */
+.sd-switch-app-link {
+  font-family: var(--font-ui), sans-serif;
+  font-size: 0.8125rem;
+  color: var(--sd-text-dim);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--sd-transition), color var(--sd-transition);
+}
+
+.sd-switch-app-link:hover {
+  color: var(--sd-accent);
+  border-bottom-color: var(--sd-accent);
+}
+
 .sd-action-error {
   margin-top: 1rem;
   padding: 0.75rem 1rem;
@@ -899,6 +925,137 @@ h3,
   font-size: 0.9rem;
   margin: 0;
   line-height: 1.4;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Surface picker - the four-app launcher shown on a host/preview URL that */
+/* doesn't match a real subdomain (dev/testing scaffolding until DNS is    */
+/* connected), and the destination of every surface's "Switch app" link.   */
+/* Most likely page to get screenshotted when showing this to someone, so  */
+/* it gets the same design quality as everything else, not a debug menu.  */
+/* ---------------------------------------------------------------------- */
+
+.sd-picker-shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem 4rem;
+  background: var(--sd-bg-subtle);
+}
+
+.sd-picker-logo {
+  font-family: var(--font-heading), sans-serif;
+  font-weight: 400;
+  font-size: 1.75rem;
+  color: var(--sd-text);
+}
+
+.sd-picker-intro {
+  text-align: center;
+  max-width: 30rem;
+  margin: 0.75rem 0 2.5rem;
+}
+
+.sd-picker-intro h1 {
+  font-family: var(--font-heading), sans-serif;
+  font-weight: 400;
+  font-size: 1.15rem;
+  color: var(--sd-text-dim);
+  margin: 0;
+}
+
+.sd-picker-intro p {
+  font-family: var(--font-body), sans-serif;
+  color: var(--sd-text-dim);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin: 0.6rem 0 0;
+}
+
+.sd-picker-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.1rem;
+  max-width: 25rem;
+  width: 100%;
+}
+
+.sd-picker-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+  background: var(--sd-white);
+  border: 1px solid var(--sd-border);
+  border-radius: var(--sd-radius-card);
+  box-shadow: var(--sd-shadow-card);
+  padding: 1.5rem;
+  text-decoration: none;
+  transition: box-shadow var(--sd-transition), border-color var(--sd-transition), transform 120ms ease;
+}
+
+.sd-picker-card:hover {
+  box-shadow: var(--sd-shadow-card-hover);
+  border-color: var(--sd-accent);
+  transform: translateY(-2px);
+}
+
+.sd-picker-card-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--sd-radius-sharp);
+  background: var(--sd-bg-subtle);
+  color: var(--sd-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sd-picker-card-icon svg {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
+.sd-picker-card h2 {
+  font-family: var(--font-heading), sans-serif;
+  font-weight: 400;
+  font-size: 1.2rem;
+  color: var(--sd-text);
+  margin: 0;
+}
+
+.sd-picker-card p {
+  font-family: var(--font-body), sans-serif;
+  color: var(--sd-text-dim);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.sd-picker-card-cta {
+  font-family: var(--font-ui), sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--sd-accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.15rem;
+  transition: gap var(--sd-transition);
+}
+
+.sd-picker-card:hover .sd-picker-card-cta {
+  gap: 0.55rem;
+}
+
+@media (min-width: 640px) {
+  .sd-picker-grid {
+    grid-template-columns: repeat(2, 1fr);
+    max-width: 44rem;
+  }
 }
 
 @media (min-width: 768px) {

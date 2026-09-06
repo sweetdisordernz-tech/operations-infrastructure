@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { Tag, Package, Truck } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/current-user";
+import { FloorHeader } from "@/app/_components/floor-header";
 
 // Always render per-request (never statically prerendered at build time).
 export const dynamic = "force-dynamic";
@@ -11,10 +12,7 @@ export default async function FloorHome() {
 
   return (
     <div className="sd-shell">
-      <div className="sd-floor-header">
-        <span className="sd-floor-logo">Sweet Disorder</span>
-        <h1>Sweet Disorder Floor</h1>
-      </div>
+      <FloorHeader title="Sweet Disorder Floor" />
       <main className="sd-main">
         <nav className="sd-station-grid" aria-label="Choose a station">
           <a className="sd-station-button sd-station-button--label" href="/label">

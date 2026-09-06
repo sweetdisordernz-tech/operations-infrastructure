@@ -6,6 +6,7 @@ import { getNextLabellingBatch } from "@/lib/tasks/labelling";
 import { getCompletedTodayCount } from "@/lib/tasks/shared";
 import { formatPackagingType } from "@/lib/format";
 import { TaskActionForm } from "@/app/_components/task-action-form";
+import { FloorHeader } from "@/app/_components/floor-header";
 import { completeLabellingBatchAction } from "./actions";
 
 // Always render per-request (never statically prerendered at build time).
@@ -22,10 +23,7 @@ export default async function LabelPage() {
 
   return (
     <div className="sd-shell sd-shell--label">
-      <div className="sd-floor-header">
-        <span className="sd-floor-logo">Sweet Disorder</span>
-        <h1>Labelling &amp; filling</h1>
-      </div>
+      <FloorHeader title="Labelling & filling" />
       <main className="sd-main">
         <div className="sd-task-wrap">
           <div className="sd-completed-today">

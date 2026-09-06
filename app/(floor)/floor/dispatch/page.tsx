@@ -6,6 +6,7 @@ import { getNextDispatchOrder } from "@/lib/tasks/dispatch";
 import { getCompletedTodayCount } from "@/lib/tasks/shared";
 import { TaskActionForm } from "@/app/_components/task-action-form";
 import { OrderTaskLineItemList } from "@/app/_components/order-task-line-item-list";
+import { FloorHeader } from "@/app/_components/floor-header";
 import { completeDispatchAction } from "./actions";
 
 // Always render per-request (never statically prerendered at build time).
@@ -22,10 +23,7 @@ export default async function DispatchPage() {
 
   return (
     <div className="sd-shell sd-shell--dispatch">
-      <div className="sd-floor-header">
-        <span className="sd-floor-logo">Sweet Disorder</span>
-        <h1>Dispatch</h1>
-      </div>
+      <FloorHeader title="Dispatch" />
       <main className="sd-main">
         <div className="sd-task-wrap">
           <div className="sd-completed-today">

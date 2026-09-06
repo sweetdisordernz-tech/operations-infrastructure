@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAdminPageUser } from "@/lib/admin/require-page-user";
 import { OpsNav } from "@/app/_components/ops-nav";
 import { LogoutButton } from "@/app/_components/logout-button";
+import { SwitchAppLink } from "@/app/_components/switch-app-link";
 import { crossSurfaceHref } from "@/lib/subdomains";
 
 // Always render per-request (never statically prerendered at build time) -
@@ -28,6 +29,7 @@ export default async function OpsAuthenticatedLayout({
           <a className="sd-topbar-switch" href={adminHref}>
             Switch to Master Connect
           </a>
+          <SwitchAppLink />
           <span className="sd-caption" style={{ margin: 0 }}>
             {user.name}
           </span>
