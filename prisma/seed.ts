@@ -14,7 +14,11 @@ import {
   LeadSegment,
 } from "@prisma/client";
 import { hashPin } from "../lib/auth/pin";
-import { backfillProductImages } from "../lib/products/image-backfill";
+import {
+  backfillProductImages,
+  applyManualProductImages,
+  type ManualProductImage,
+} from "../lib/products/image-backfill";
 
 const prisma = new PrismaClient();
 
@@ -86,6 +90,8 @@ const PACKAGING_TYPE_MAP: Record<string, PackagingType> = {
   Jar: PackagingType.JAR,
   Tin: PackagingType.TIN,
   Stand: PackagingType.STAND,
+  Bag: PackagingType.BAG,
+  Candle: PackagingType.CANDLE,
 };
 
 // No real SKU series exists yet for Christmas products - assumed prefix.
@@ -147,6 +153,76 @@ function loadCatalog(): CatalogRow[] {
   });
 }
 
+type NewRangeRow = {
+  range: string;
+  skuPrefix: string;
+  wholesaleVisible: boolean;
+  packagingType: PackagingType;
+  name: string;
+};
+
+/**
+ * Newly-discovered ranges (Astrology, Hunting & Fishing, Garden, Scent
+ * Dispensary) reviewed directly off the live site, page by page, as they
+ * were found - see the "Complete the Astrology, Hunting & Fishing ranges;
+ * add Garden and Candle ranges" request for the full rationale. Same
+ * minimal-skeleton treatment as everywhere else these show up: no sku, no
+ * filling, no wholesale price row (see the seeding loop below) - just a
+ * name, a range, a packaging type, and (once applyManualProductImages runs)
+ * a real photo where one was given.
+ */
+function loadNewRanges(): NewRangeRow[] {
+  const csvPath = join(__dirname, "data", "new-ranges.csv");
+  const content = readFileSync(csvPath, "utf8");
+  const [header, ...dataRows] = parseCsv(content);
+
+  const columnIndex = (name: string) => header.indexOf(name);
+  const rangeIdx = columnIndex("range");
+  const skuPrefixIdx = columnIndex("sku_prefix");
+  const wholesaleVisibleIdx = columnIndex("wholesale_visible");
+  const packagingIdx = columnIndex("packaging_type");
+  const nameIdx = columnIndex("name");
+
+  return dataRows.map((cells, rowNumber) => {
+    const packagingRaw = cells[packagingIdx]?.trim();
+    const packagingType = PACKAGING_TYPE_MAP[packagingRaw];
+    if (!packagingType) {
+      throw new Error(`new-ranges.csv row ${rowNumber + 2}: unknown packaging_type "${packagingRaw}"`);
+    }
+
+    return {
+      range: cells[rangeIdx].trim(),
+      skuPrefix: cells[skuPrefixIdx].trim(),
+      wholesaleVisible: cells[wholesaleVisibleIdx].trim().toLowerCase() === "true",
+      packagingType,
+      name: cells[nameIdx].trim(),
+    };
+  });
+}
+
+/**
+ * Manually-curated name->photo-URL pairs, reviewed directly against
+ * specific live-site pages rather than pulled from the automated
+ * products.json feed (see lib/products/image-backfill.ts for why both
+ * exist side by side). Deliberately a flat list, not a name-keyed object -
+ * a few names (e.g. "CEO of Everything") legitimately repeat across
+ * different physical products (a badge and a mug), each with its own
+ * photo, and a keyed object would silently drop one.
+ */
+function loadProductImages(): ManualProductImage[] {
+  const csvPath = join(__dirname, "data", "product-images.csv");
+  const content = readFileSync(csvPath, "utf8");
+  const [header, ...dataRows] = parseCsv(content);
+
+  const nameIdx = header.indexOf("name");
+  const imageUrlIdx = header.indexOf("image_url");
+
+  return dataRows.map((cells) => ({
+    name: cells[nameIdx].trim(),
+    imageUrl: cells[imageUrlIdx].trim(),
+  }));
+}
+
 type LabelComplianceRow = {
   name: string;
   sku: string | null;
@@ -197,12 +273,18 @@ function randomInt(min: number, max: number): number {
 
 // Plausible wholesale unit prices by packaging type, for seed/test data only
 // - Molly will set real pricing later. Tins are sold in 4-packs
-// (min_order_qty), so priced lower per unit than a bottle/jar.
+// (min_order_qty), so priced lower per unit than a bottle/jar. BAG and
+// CANDLE are never actually looked up here - the new-ranges loop below
+// deliberately skips PricingTierProduct entirely for those (no pricing
+// yet) - these two entries exist only so this stays a complete Record and
+// compiles; update them once Molly has real numbers.
 const WHOLESALE_PRICE_RANGE_BY_PACKAGING: Record<PackagingType, [number, number]> = {
   [PackagingType.BOTTLE]: [6, 8],
   [PackagingType.JAR]: [9, 11],
   [PackagingType.TIN]: [2.5, 3.5],
   [PackagingType.STAND]: [120, 160],
+  [PackagingType.BAG]: [5, 7],
+  [PackagingType.CANDLE]: [12, 16],
 };
 
 function wholesalePriceFor(packagingType: PackagingType): number {
@@ -674,6 +756,65 @@ async function main() {
   console.log(`Seeded ${productCount} products (+ inventory items + NZ Standard wholesale prices)`);
 
   // -------------------------------------------------------------------------
+  // Newly-discovered ranges (Astrology, Hunting & Fishing, Garden, Scent
+  // Dispensary) - minimal skeleton only: no sku, no filling, no pricing tier
+  // row (unlike the main catalog loop above). Astrology and Hunting &
+  // Fishing are wholesale-visible per the source request; Garden and Scent
+  // Dispensary are deliberately hidden. Every one of these is skuless, so
+  // matched on (range, name) like the skuless branch in the main catalog
+  // loop - safe to re-run.
+  // -------------------------------------------------------------------------
+  const newRanges = loadNewRanges();
+  const newRangeByName = new Map<string, { id: string }>();
+  let newRangeProductCount = 0;
+
+  for (const row of newRanges) {
+    let range = newRangeByName.get(row.range);
+    if (!range) {
+      const id = `seed-range-${row.skuPrefix}`;
+      range = await prisma.productRange.upsert({
+        where: { id },
+        update: { name: row.range, skuPrefix: row.skuPrefix },
+        create: { id, name: row.range, skuPrefix: row.skuPrefix },
+      });
+      newRangeByName.set(row.range, range);
+    }
+
+    const existing = await prisma.product.findFirst({
+      where: { rangeId: range.id, name: row.name, sku: null },
+    });
+    const product = existing
+      ? await prisma.product.update({
+          where: { id: existing.id },
+          data: { packagingType: row.packagingType, wholesaleVisible: row.wholesaleVisible },
+        })
+      : await prisma.product.create({
+          data: {
+            sku: null,
+            name: row.name,
+            rangeId: range.id,
+            packagingType: row.packagingType,
+            minOrderQty: 1,
+            wholesaleVisible: row.wholesaleVisible,
+          },
+        });
+
+    // No random quantityOnHand here (unlike the main catalog loop) - these
+    // aren't real tracked inventory yet, just 0 until someone counts them,
+    // same convention lib/admin/products.ts uses for a freshly-added product.
+    await prisma.inventoryItem.upsert({
+      where: { productId: product.id },
+      update: {},
+      create: { productId: product.id, quantityOnHand: 0 },
+    });
+
+    newRangeProductCount++;
+  }
+  console.log(
+    `Seeded ${newRangeByName.size} new product ranges (${newRangeProductCount} products, no pricing/filling yet)`,
+  );
+
+  // -------------------------------------------------------------------------
   // Label compliance records - matched to products by name (case/whitespace
   // -insensitive), since most rows in the real compliance tracker have no
   // sku to match on. Where a row does carry a sku, it's used to verify the
@@ -827,15 +968,46 @@ async function main() {
   console.log(`Seeded ${EMAIL_TEMPLATES.length} email templates`);
 
   // -------------------------------------------------------------------------
+  // Manual product image backfill - real photos from specific live-site
+  // pages someone reviewed directly (prisma/data/product-images.csv), as
+  // opposed to the automated products.json feed match below. Runs first and
+  // is treated as authoritative (overwrites any imageBlobUrl already set),
+  // so a confirmed-correct manual photo always wins over a possibly-wrong
+  // automated match. See lib/products/image-backfill.ts.
+  // -------------------------------------------------------------------------
+  const manualImages = loadProductImages();
+  const manualBackfill = await applyManualProductImages(prisma, manualImages);
+  console.log(
+    `Manual product image backfill: ${manualBackfill.matchedAndUpdated} matched and updated, ` +
+      `${manualBackfill.matchedButFailed.length} matched but failed to download/upload, ` +
+      `${manualBackfill.unmatched.length} unmatched (of ${manualImages.length} CSV rows).`,
+  );
+  if (manualBackfill.matchedButFailed.length > 0) {
+    console.log("  Matched but failed (network/upload error, will retry next seed run):");
+    for (const { name, reason } of manualBackfill.matchedButFailed) {
+      console.log(`    - ${name}: ${reason}`);
+    }
+  }
+  if (manualBackfill.unmatched.length > 0) {
+    console.log("  No product in the catalog matches this name (expected for the merch line, which");
+    console.log("  has photos ready here but no product records yet - see the request writeup):");
+    for (const name of manualBackfill.unmatched) {
+      console.log(`    - ${name}`);
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // Product image backfill - pulls real photos from the live Shopify
   // storefront (sweetdisorder.co.nz/products.json) and matches them to our
   // Product rows by exact normalized name. Idempotent (skips any product
   // that already has imageBlobUrl set) and never throws - a network failure
   // here must never block the rest of the seed. See lib/products/image-backfill.ts.
+  // Runs after the manual list above, so it only ever fills in names the
+  // manual list didn't already cover.
   // -------------------------------------------------------------------------
   const imageBackfill = await backfillProductImages(prisma);
   console.log(
-    `Product image backfill: ${imageBackfill.matchedAndUpdated} matched and updated, ` +
+    `Automated product image backfill: ${imageBackfill.matchedAndUpdated} matched and updated, ` +
       `${imageBackfill.alreadyHadImage} already had an image, ` +
       `${imageBackfill.matchedButFailed.length} matched but failed to download/upload, ` +
       `${imageBackfill.unmatched.length} unmatched.`,
@@ -851,6 +1023,25 @@ async function main() {
     for (const name of imageBackfill.unmatched) {
       console.log(`    - ${name}`);
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Final tally - exactly how many catalog products still have zero image
+  // after both backfill passes above, so this number never has to be
+  // guessed or recomputed by hand.
+  // -------------------------------------------------------------------------
+  const totalProductCount = await prisma.product.count();
+  const productsWithoutImage = await prisma.product.findMany({
+    where: { imageBlobUrl: null },
+    select: { name: true },
+    orderBy: { name: "asc" },
+  });
+  console.log(
+    `Image coverage: ${totalProductCount - productsWithoutImage.length} of ${totalProductCount} ` +
+      `products now have an image, ${productsWithoutImage.length} still have none:`,
+  );
+  for (const { name } of productsWithoutImage) {
+    console.log(`    - ${name}`);
   }
 
   console.log("Seed complete.");

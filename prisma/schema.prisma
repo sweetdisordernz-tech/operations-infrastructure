@@ -30,6 +30,8 @@ enum PackagingType {
   JAR
   TIN
   STAND
+  BAG
+  CANDLE
 }
 
 enum AllergenStatus {

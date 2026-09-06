@@ -76,6 +76,8 @@ export function ProductForm({
             <option value="JAR">Jar</option>
             <option value="TIN">Tin</option>
             <option value="STAND">Stand</option>
+            <option value="BAG">Bag</option>
+            <option value="CANDLE">Candle</option>
           </select>
         </div>
 

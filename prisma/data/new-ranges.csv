@@ -1,0 +1,27 @@
+range,sku_prefix,wholesale_visible,packaging_type,name
+Astrology Range,AST,true,Bag,Aries
+Astrology Range,AST,true,Bag,Taurus
+Astrology Range,AST,true,Bag,Gemini
+Astrology Range,AST,true,Bag,Cancer
+Astrology Range,AST,true,Bag,Leo
+Astrology Range,AST,true,Bag,Virgo
+Astrology Range,AST,true,Bag,Libra
+Astrology Range,AST,true,Bag,Scorpio
+Astrology Range,AST,true,Bag,Sagittarius
+Astrology Range,AST,true,Bag,Capricorn
+Astrology Range,AST,true,Bag,Aquarius
+Hunting & Fishing Range,HFR,true,Bag,Cod Help Me
+Hunting & Fishing Range,HFR,true,Bag,Pitch Me Up
+Hunting & Fishing Range,HFR,true,Bag,Nature Calls
+Hunting & Fishing Range,HFR,true,Bag,The Buck Stops Here
+Hunting & Fishing Range,HFR,true,Bag,Take A Hike
+Hunting & Fishing Range,HFR,true,Bag,Bait Expectations
+Garden Range,GDN,false,Bag,Leaf Me Alone
+Garden Range,GDN,false,Bag,Weed Killer
+Garden Range,GDN,false,Bag,Green Finger Fuel
+Garden Range,GDN,false,Bag,Snip Happens
+Garden Range,GDN,false,Bag,Thyme Out
+Garden Range,GDN,false,Bag,Pot Head
+Scent Dispensary,CND,false,Candle,For Fart Sake Candle
+Scent Dispensary,CND,false,Candle,Shit Happens Candle
+Scent Dispensary,CND,false,Candle,Toxic Socks Soy Candle

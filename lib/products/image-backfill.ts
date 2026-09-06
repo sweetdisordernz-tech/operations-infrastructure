@@ -95,6 +95,39 @@ export type ImageBackfillSummary = {
 };
 
 /**
+ * Downloads one image and uploads it to Vercel Blob at
+ * product-images/{sku-or-id}.jpg, then sets Product.imageBlobUrl. Shared by
+ * both the automated Shopify-feed matcher below and the manual name->URL
+ * list in applyManualProductImages - same network/timeout/error handling
+ * either way, since both ultimately do the same thing with a resolved
+ * (name, imageUrl) pair.
+ */
+async function fetchAndStoreProductImage(
+  prisma: PrismaClient,
+  product: { id: string; sku: string | null },
+  imageUrl: string,
+): Promise<void> {
+  const imageResponse = await fetch(imageUrl, { signal: AbortSignal.timeout(IMAGE_DOWNLOAD_TIMEOUT_MS) });
+  if (!imageResponse.ok) {
+    throw new Error(`image download returned HTTP ${imageResponse.status}`);
+  }
+  const imageBytes = Buffer.from(await imageResponse.arrayBuffer());
+  const contentType = imageResponse.headers.get("content-type") ?? "image/jpeg";
+  const blobKey = `product-images/${product.sku ?? product.id}.jpg`;
+
+  const blob = await put(blobKey, imageBytes, {
+    access: "public",
+    contentType,
+    abortSignal: AbortSignal.timeout(BLOB_UPLOAD_TIMEOUT_MS),
+  });
+
+  await prisma.product.update({
+    where: { id: product.id },
+    data: { imageBlobUrl: blob.url },
+  });
+}
+
+/**
  * Never throws - a total feed failure (network blocked, non-2xx, bad JSON)
  * is logged and treated as a no-op so it can never block the rest of
  * prisma/seed.ts. Idempotent: only considers Product rows where
@@ -153,33 +186,80 @@ export async function backfillProductImages(prisma: PrismaClient): Promise<Image
     }
 
     try {
-      const imageResponse = await fetch(match.imageUrl, {
-        signal: AbortSignal.timeout(IMAGE_DOWNLOAD_TIMEOUT_MS),
-      });
-      if (!imageResponse.ok) {
-        throw new Error(`image download returned HTTP ${imageResponse.status}`);
-      }
-      const imageBytes = Buffer.from(await imageResponse.arrayBuffer());
-      const contentType = imageResponse.headers.get("content-type") ?? "image/jpeg";
-      const blobKey = `product-images/${product.sku ?? product.id}.jpg`;
-
-      const blob = await put(blobKey, imageBytes, {
-        access: "public",
-        contentType,
-        abortSignal: AbortSignal.timeout(BLOB_UPLOAD_TIMEOUT_MS),
-      });
-
-      await prisma.product.update({
-        where: { id: product.id },
-        data: { imageBlobUrl: blob.url },
-      });
-
+      await fetchAndStoreProductImage(prisma, product, match.imageUrl);
       summary.matchedAndUpdated++;
     } catch (err) {
       summary.matchedButFailed.push({
         name: product.name,
         reason: err instanceof Error ? err.message : "Unknown error",
       });
+    }
+  }
+
+  return summary;
+}
+
+/**
+ * Same idea as backfillProductImages, but for a manually-curated name->URL
+ * list (real photos from specific live-site pages someone reviewed
+ * directly) instead of the automated products.json feed. Matches by exact
+ * normalized name, with one fallback: if a CSV name like "Old Classics
+ * Acid Drops" doesn't match anything directly, retry with the "old
+ * classics " prefix stripped, since that range's products are stored
+ * under their bare name (e.g. "Acid Drops") - the range name, not the
+ * product name, carries "Old Classics".
+ *
+ * Unlike backfillProductImages, this list is manually curated and
+ * explicitly reviewed by a person against the live site, so it's treated
+ * as authoritative: it overwrites any imageBlobUrl already set (e.g. from
+ * a possibly-wrong automated feed match), rather than skipping products
+ * that already have one. Idempotent in the sense that re-running it with
+ * the same list produces the same result every time - never throws, a
+ * per-entry failure is caught and recorded rather than aborting the batch.
+ */
+export type ManualImageBackfillSummary = {
+  matchedAndUpdated: number;
+  matchedButFailed: Array<{ name: string; reason: string }>;
+  unmatched: string[];
+};
+
+const OLD_CLASSICS_PREFIX = "old classics ";
+
+export type ManualProductImage = { name: string; imageUrl: string };
+
+export async function applyManualProductImages(
+  prisma: PrismaClient,
+  manualImages: ManualProductImage[],
+): Promise<ManualImageBackfillSummary> {
+  const summary: ManualImageBackfillSummary = {
+    matchedAndUpdated: 0,
+    matchedButFailed: [],
+    unmatched: [],
+  };
+
+  const dbProducts = await prisma.product.findMany({ select: { id: true, sku: true, name: true } });
+  const byNormalizedName = new Map<string, { id: string; sku: string | null }>();
+  for (const product of dbProducts) {
+    byNormalizedName.set(normalizeProductName(product.name), product);
+  }
+
+  for (const { name, imageUrl } of manualImages) {
+    const normalized = normalizeProductName(name);
+    let product = byNormalizedName.get(normalized);
+    if (!product && normalized.startsWith(OLD_CLASSICS_PREFIX)) {
+      product = byNormalizedName.get(normalized.slice(OLD_CLASSICS_PREFIX.length));
+    }
+
+    if (!product) {
+      summary.unmatched.push(name);
+      continue;
+    }
+
+    try {
+      await fetchAndStoreProductImage(prisma, product, imageUrl);
+      summary.matchedAndUpdated++;
+    } catch (err) {
+      summary.matchedButFailed.push({ name, reason: err instanceof Error ? err.message : "Unknown error" });
     }
   }
 

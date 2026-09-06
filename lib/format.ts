@@ -5,6 +5,8 @@ const PACKAGING_TYPE_LABELS: Record<PackagingType, string> = {
   JAR: "Jar",
   TIN: "Tin",
   STAND: "Stand",
+  BAG: "Bag",
+  CANDLE: "Candle",
 };
 
 export function formatPackagingType(type: PackagingType): string {
