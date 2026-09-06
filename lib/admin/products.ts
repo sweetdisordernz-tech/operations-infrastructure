@@ -25,6 +25,7 @@ export type ProductRow = {
   active: boolean;
   discontinued: boolean;
   wholesaleVisible: boolean;
+  notes: string | null;
 };
 
 export async function getProducts(): Promise<ProductRow[]> {
@@ -47,6 +48,7 @@ export async function getProducts(): Promise<ProductRow[]> {
     active: product.active,
     discontinued: product.discontinued,
     wholesaleVisible: product.wholesaleVisible,
+    notes: product.notes,
   }));
 }
 
@@ -68,6 +70,7 @@ export async function getProduct(id: string): Promise<ProductRow | null> {
     active: product.active,
     discontinued: product.discontinued,
     wholesaleVisible: product.wholesaleVisible,
+    notes: product.notes,
   };
 }
 
@@ -110,6 +113,7 @@ export type ProductInput = {
   wholesaleVisible: boolean;
   active: boolean;
   discontinued: boolean;
+  notes: string | null;
 };
 
 function validateProductInput(input: ProductInput) {
@@ -141,6 +145,7 @@ export async function createProduct(input: ProductInput): Promise<ProductRow> {
       wholesaleVisible: input.wholesaleVisible,
       active: input.active,
       discontinued: input.discontinued,
+      notes: input.notes,
       inventoryItem: { create: { quantityOnHand: 0 } },
     },
     include: { range: true, filling: true },
@@ -161,6 +166,7 @@ export async function createProduct(input: ProductInput): Promise<ProductRow> {
     active: product.active,
     discontinued: product.discontinued,
     wholesaleVisible: product.wholesaleVisible,
+    notes: product.notes,
   };
 }
 
@@ -189,6 +195,7 @@ export async function updateProduct(id: string, input: ProductInput): Promise<vo
       wholesaleVisible: input.wholesaleVisible,
       active: input.active,
       discontinued: input.discontinued,
+      notes: input.notes,
     },
   });
 }

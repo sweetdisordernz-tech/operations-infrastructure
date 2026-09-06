@@ -285,6 +285,7 @@ type MerchRow = {
   skuAu: string | null;
   priceAu: number | null;
   imageUrl: string | null;
+  notes: string | null;
 };
 
 /**
@@ -310,6 +311,7 @@ function loadMerch(): MerchRow[] {
   const skuAuIdx = header.indexOf("sku_au");
   const priceAuIdx = header.indexOf("price_au");
   const imageUrlIdx = header.indexOf("image_url");
+  const notesIdx = header.indexOf("notes");
 
   return dataRows.map((cells, rowNumber) => {
     const packagingRaw = cells[packagingIdx]?.trim();
@@ -328,6 +330,7 @@ function loadMerch(): MerchRow[] {
       skuAu: nullIfBlank(cells[skuAuIdx]),
       priceAu: priceAuRaw ? Number(priceAuRaw) : null,
       imageUrl: nullIfBlank(cells[imageUrlIdx]),
+      notes: nullIfBlank(cells[notesIdx]),
     };
   });
 }
@@ -794,6 +797,32 @@ async function main() {
   });
 
   // -------------------------------------------------------------------------
+  // One-time name-collision fixups. These rename an *existing* product in
+  // place (matched on its old name + range) rather than letting the loops
+  // below create a second row under the new name - matters because
+  // catalog.csv/merch.csv already carry the new names, and a skuless
+  // product is matched by (range, name), so without this a live database
+  // seeded before this rename would end up with a duplicate rather than a
+  // rename. Safe to run every time: updateMany matches zero rows once the
+  // rename has already happened (or on a database that never had the old
+  // name at all - e.g. this repo's own local verification, or a real
+  // database seeded for the first time after this fix landed).
+  //
+  // "BOX OF 36 WITH STAND" was a name shared by two genuinely different
+  // bulk display-stand products (Treatmints' own, and Award Badges') -
+  // confirmed as two distinct real items, renamed here to be
+  // distinguishable. Their existing pricing is untouched.
+  // -------------------------------------------------------------------------
+  await prisma.product.updateMany({
+    where: { name: "BOX OF 36 WITH STAND", range: { name: "Treatmints" } },
+    data: { name: "Treatmints Display Stand (36pc)" },
+  });
+  await prisma.product.updateMany({
+    where: { name: "BOX OF 36 WITH STAND", range: { name: "Award Badges" } },
+    data: { name: "Award Badges Display Stand (36pc)" },
+  });
+
+  // -------------------------------------------------------------------------
   // Products (+ inventory item + wholesale price per product)
   // -------------------------------------------------------------------------
   let productCount = 0;
@@ -1008,13 +1037,14 @@ async function main() {
   // the schema (Product has one sku field) and is only used for the
   // mismatch warning below, same treatment as the lolly pricing loop.
   //
-  // KNOWN DATA ISSUE, not silently corrected: the source data gives
-  // "Mum of the Year" (sku_nz SDAB13) and "Perfect" (sku_nz SDAB12) the
-  // *same* AU sku, ASDAB12 - almost certainly "Mum of the Year" should be
-  // ASDAB13 to match its own NZ numbering, but that's a guess, not a fact,
-  // so both are seeded exactly as given. Neither AU sku is stored in a
-  // unique DB column (see above), so this doesn't trip a constraint - it's
-  // purely a source-data inconsistency to flag for Molly to confirm.
+  // "Mum of the Year" and "Perfect" were both given the same AU sku
+  // (ASDAB12) by the source data - two confirmed real, distinct badges, so
+  // rather than guess which one's real number got mis-copied onto the
+  // other, both carry a clearly-flagged placeholder (ASDAB12-PENDING-1/-2)
+  // in the sku_au column plus a Product.notes entry, until Molly confirms
+  // the real numbers with her supplier. Neither placeholder is stored in a
+  // unique DB column (see above), so this can't trip a constraint - it's
+  // purely there to be visible to whoever looks at these two records next.
   // -------------------------------------------------------------------------
   const merchRows = loadMerch();
   const merchRangeByName = new Map<string, { id: string }>();
@@ -1046,7 +1076,13 @@ async function main() {
     const product = row.skuNz
       ? await prisma.product.upsert({
           where: { sku: row.skuNz },
-          update: { name: row.name, rangeId: range.id, packagingType: row.packagingType, wholesaleVisible: false },
+          update: {
+            name: row.name,
+            rangeId: range.id,
+            packagingType: row.packagingType,
+            wholesaleVisible: false,
+            notes: row.notes,
+          },
           create: {
             sku: row.skuNz,
             name: row.name,
@@ -1054,6 +1090,7 @@ async function main() {
             packagingType: row.packagingType,
             minOrderQty: 1,
             wholesaleVisible: false,
+            notes: row.notes,
           },
         })
       : await (async () => {
@@ -1063,7 +1100,7 @@ async function main() {
           if (existing) {
             return prisma.product.update({
               where: { id: existing.id },
-              data: { packagingType: row.packagingType, wholesaleVisible: false },
+              data: { packagingType: row.packagingType, wholesaleVisible: false, notes: row.notes },
             });
           }
           return prisma.product.create({
@@ -1074,6 +1111,7 @@ async function main() {
               packagingType: row.packagingType,
               minOrderQty: 1,
               wholesaleVisible: false,
+              notes: row.notes,
             },
           });
         })();

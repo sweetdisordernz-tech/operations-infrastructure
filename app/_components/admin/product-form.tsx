@@ -126,6 +126,17 @@ export function ProductForm({
         </div>
       </div>
 
+      <div className="sd-field">
+        <label htmlFor="notes">Internal notes</label>
+        <textarea
+          id="notes"
+          name="notes"
+          rows={2}
+          defaultValue={product?.notes ?? ""}
+          placeholder="Optional - staff-only, never shown to wholesale customers (e.g. a placeholder value pending confirmation)"
+        />
+      </div>
+
       <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
         <label className="sd-checkbox-field">
           <input type="checkbox" name="wholesaleVisible" defaultChecked={product?.wholesaleVisible ?? false} />

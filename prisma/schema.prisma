@@ -322,6 +322,12 @@ model Product {
   active           Boolean       @default(true)
   discontinued     Boolean       @default(false)
   wholesaleVisible Boolean       @default(false) @map("wholesale_visible")
+  /**
+   * Free-text internal note, e.g. flagging a placeholder value that still
+   * needs verifying (a made-up SKU pending confirmation from a supplier)
+   * - never shown to wholesale customers, admin/ops surfaces only.
+   */
+  notes            String?
   createdAt        DateTime      @default(now()) @map("created_at")
   updatedAt        DateTime      @updatedAt @map("updated_at")
 

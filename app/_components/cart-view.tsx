@@ -29,12 +29,25 @@ export function CartView({
   );
 
   const resolved = items.map((item) => ({ item, product: catalogByProductId.get(item.productId) }));
-  const validLines = resolved.filter(
+  const foundLines = resolved.filter(
     (line): line is { item: (typeof items)[number]; product: NonNullable<typeof line.product> } =>
       Boolean(line.product),
   );
   const staleLines = resolved.filter((line) => !line.product);
-  const total = validLines.reduce((sum, line) => sum + line.product.price * line.item.quantity, 0);
+
+  // The product exists, but has no price under the region this line is
+  // currently toggled to - same "not orderable in that region" situation
+  // checkout.ts would reject at submit time, surfaced here instead so it's
+  // never a surprise. Live per line.item.region, so toggling a line
+  // between NZ/AU immediately shows the right price (or this message) -
+  // never the home-tier price for a region it isn't actually priced for.
+  const validLines = foundLines.filter((line) => line.product.priceByRegion[line.item.region] !== undefined);
+  const unpricedForRegionLines = foundLines.filter(
+    (line) => line.product.priceByRegion[line.item.region] === undefined,
+  );
+
+  const priceFor = (line: (typeof validLines)[number]) => line.product.priceByRegion[line.item.region]!;
+  const total = validLines.reduce((sum, line) => sum + priceFor(line) * line.item.quantity, 0);
 
   useEffect(() => {
     if (state.status === "success") {
@@ -59,53 +72,63 @@ export function CartView({
   return (
     <div>
       <div className="sd-product-list">
-        {validLines.map(({ item, product }) => (
-          <div key={`${item.productId}:${item.region}`} className="sd-cart-line">
-            <div className="sd-cart-line-top">
-              <div>
-                <p className="sd-product-name">{product.name}</p>
-                <p className="sd-product-meta">
-                  {formatPackagingType(product.packagingType)}
-                  {product.fillingName ? ` — ${product.fillingName}` : ""}
+        {[...validLines, ...unpricedForRegionLines].map(({ item, product }) => {
+          const price = product.priceByRegion[item.region];
+          return (
+            <div key={`${item.productId}:${item.region}`} className="sd-cart-line">
+              <div className="sd-cart-line-top">
+                <div>
+                  <p className="sd-product-name">{product.name}</p>
+                  <p className="sd-product-meta">
+                    {formatPackagingType(product.packagingType)}
+                    {product.fillingName ? ` — ${product.fillingName}` : ""}
+                  </p>
+                </div>
+                <span className="sd-product-price">
+                  {price !== undefined ? `$${(price * item.quantity).toFixed(2)}` : "—"}
+                </span>
+              </div>
+              <div className="sd-cart-line-actions">
+                <div className="sd-qty-stepper">
+                  <button
+                    type="button"
+                    aria-label="Decrease quantity"
+                    disabled={item.quantity <= product.minOrderQty}
+                    onClick={() => updateQuantity(item.productId, item.region, item.quantity - 1)}
+                  >
+                    <Minus size={16} aria-hidden="true" />
+                  </button>
+                  <span>{item.quantity}</span>
+                  <button
+                    type="button"
+                    aria-label="Increase quantity"
+                    onClick={() => updateQuantity(item.productId, item.region, item.quantity + 1)}
+                  >
+                    <Plus size={16} aria-hidden="true" />
+                  </button>
+                </div>
+                {shipsToBothRegions && (
+                  <RegionToggle
+                    region={item.region}
+                    onChange={(next) => setItemRegion(item.productId, item.region, next)}
+                  />
+                )}
+                <button
+                  type="button"
+                  className="sd-remove-link"
+                  onClick={() => removeItem(item.productId, item.region)}
+                >
+                  Remove
+                </button>
+              </div>
+              {price === undefined && (
+                <p className="sd-action-error" style={{ margin: "0.5rem 0 0" }}>
+                  Not available in the {item.region} price list - switch region or remove this item.
                 </p>
-              </div>
-              <span className="sd-product-price">${(product.price * item.quantity).toFixed(2)}</span>
-            </div>
-            <div className="sd-cart-line-actions">
-              <div className="sd-qty-stepper">
-                <button
-                  type="button"
-                  aria-label="Decrease quantity"
-                  disabled={item.quantity <= product.minOrderQty}
-                  onClick={() => updateQuantity(item.productId, item.region, item.quantity - 1)}
-                >
-                  <Minus size={16} aria-hidden="true" />
-                </button>
-                <span>{item.quantity}</span>
-                <button
-                  type="button"
-                  aria-label="Increase quantity"
-                  onClick={() => updateQuantity(item.productId, item.region, item.quantity + 1)}
-                >
-                  <Plus size={16} aria-hidden="true" />
-                </button>
-              </div>
-              {shipsToBothRegions && (
-                <RegionToggle
-                  region={item.region}
-                  onChange={(next) => setItemRegion(item.productId, item.region, next)}
-                />
               )}
-              <button
-                type="button"
-                className="sd-remove-link"
-                onClick={() => removeItem(item.productId, item.region)}
-              >
-                Remove
-              </button>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {staleLines.length > 0 && (

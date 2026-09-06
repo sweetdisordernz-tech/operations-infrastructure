@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
-import type { PackagingType, WholesaleCustomer } from "@prisma/client";
+import { getCanonicalTierForRegion } from "@/lib/wholesale/pricing";
+import type { PackagingType, Region, WholesaleCustomer } from "@prisma/client";
 
 /**
  * The wholesale-visible, priced catalog for a given customer. A product
@@ -20,6 +21,16 @@ export type WholesaleCatalogProduct = {
   fillingName: string | null;
   minOrderQty: number;
   price: number;
+  /**
+   * Price per region, for the cart's live preview when a shipsToBothRegions
+   * customer toggles a line's region. Always includes the home tier's
+   * region (same value as `price`); includes the other region too only
+   * when this product has a price there and the customer ships to both -
+   * a product with no AU price, say, just won't have an AU entry, and the
+   * cart treats that the same way checkout.ts does (unavailable in that
+   * region, not silently priced from the wrong tier).
+   */
+  priceByRegion: Partial<Record<Region, number>>;
   imageBlobUrl: string | null;
 };
 
@@ -32,9 +43,12 @@ export type WholesaleCatalog = {
 const EMPTY_CATALOG: WholesaleCatalog = { products: [], ranges: [], fillings: [] };
 
 export async function getWholesaleCatalog(
-  customer: Pick<WholesaleCustomer, "pricingTierId">,
+  customer: Pick<WholesaleCustomer, "pricingTierId" | "shipsToBothRegions">,
 ): Promise<WholesaleCatalog> {
   if (!customer.pricingTierId) return EMPTY_CATALOG;
+
+  const homeTier = await prisma.pricingTier.findUnique({ where: { id: customer.pricingTierId } });
+  if (!homeTier) return EMPTY_CATALOG;
 
   const products = await prisma.product.findMany({
     where: {
@@ -50,20 +64,47 @@ export async function getWholesaleCatalog(
     orderBy: { name: "asc" },
   });
 
-  const catalogProducts: WholesaleCatalogProduct[] = products.map((product) => ({
-    productId: product.id,
-    sku: product.sku,
-    name: product.name,
-    rangeId: product.rangeId,
-    rangeName: product.range.name,
-    packagingType: product.packagingType,
-    fillingId: product.fillingId,
-    fillingName: product.filling?.name ?? null,
-    minOrderQty: product.minOrderQty,
+  // Only fetched when it can actually matter: a customer who doesn't ship
+  // to both regions never sees a region toggle in the cart at all, so
+  // there's nothing for the "other" region's price to do for them.
+  const otherRegionPriceByProductId = new Map<string, number>();
+  if (customer.shipsToBothRegions) {
+    const otherRegion: Region = homeTier.region === "NZ" ? "AU" : "NZ";
+    const otherTier = await getCanonicalTierForRegion(otherRegion);
+    if (otherTier) {
+      const otherRows = await prisma.pricingTierProduct.findMany({
+        where: { pricingTierId: otherTier.id, productId: { in: products.map((p) => p.id) } },
+      });
+      for (const row of otherRows) {
+        otherRegionPriceByProductId.set(row.productId, Number(row.price));
+      }
+    }
+  }
+
+  const catalogProducts: WholesaleCatalogProduct[] = products.map((product) => {
     // Guaranteed present by the `some` filter above.
-    price: Number(product.pricingTierProducts[0].price),
-    imageBlobUrl: product.imageBlobUrl,
-  }));
+    const homePrice = Number(product.pricingTierProducts[0].price);
+    const priceByRegion: Partial<Record<Region, number>> = { [homeTier.region]: homePrice };
+    const otherPrice = otherRegionPriceByProductId.get(product.id);
+    if (otherPrice !== undefined) {
+      priceByRegion[homeTier.region === "NZ" ? "AU" : "NZ"] = otherPrice;
+    }
+
+    return {
+      productId: product.id,
+      sku: product.sku,
+      name: product.name,
+      rangeId: product.rangeId,
+      rangeName: product.range.name,
+      packagingType: product.packagingType,
+      fillingId: product.fillingId,
+      fillingName: product.filling?.name ?? null,
+      minOrderQty: product.minOrderQty,
+      price: homePrice,
+      priceByRegion,
+      imageBlobUrl: product.imageBlobUrl,
+    };
+  });
 
   const ranges = [
     ...new Map(catalogProducts.map((p) => [p.rangeId, { id: p.rangeId, name: p.rangeName }])).values(),

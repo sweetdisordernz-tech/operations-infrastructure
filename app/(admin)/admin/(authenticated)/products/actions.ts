@@ -38,6 +38,7 @@ async function resolveProductInput(formData: FormData): Promise<ProductInput> {
   const skuRaw = String(formData.get("sku") ?? "").trim();
   const barcodeRaw = String(formData.get("barcode") ?? "").trim();
   const imageRaw = String(formData.get("imageBlobUrl") ?? "").trim();
+  const notesRaw = String(formData.get("notes") ?? "").trim();
 
   return {
     name: String(formData.get("name") ?? ""),
@@ -51,6 +52,7 @@ async function resolveProductInput(formData: FormData): Promise<ProductInput> {
     wholesaleVisible: formData.get("wholesaleVisible") === "on",
     active: formData.get("active") === "on",
     discontinued: formData.get("discontinued") === "on",
+    notes: notesRaw || null,
   };
 }
 
@@ -124,6 +126,7 @@ export async function toggleProductFlagAction(_prevState: ActionResult, formData
       wholesaleVisible: field === "wholesaleVisible" ? value : existing.wholesaleVisible,
       active: field === "active" ? value : existing.active,
       discontinued: existing.discontinued,
+      notes: existing.notes,
     });
 
     revalidatePath("/products");

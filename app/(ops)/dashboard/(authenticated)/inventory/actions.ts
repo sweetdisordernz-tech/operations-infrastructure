@@ -41,6 +41,7 @@ async function resolveProductInput(formData: FormData): Promise<ProductInput> {
     wholesaleVisible: formData.get("wholesaleVisible") === "on",
     active: true,
     discontinued: false,
+    notes: null,
   };
 }
 
