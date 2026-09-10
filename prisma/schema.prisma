@@ -328,6 +328,15 @@ model Product {
    * - never shown to wholesale customers, admin/ops surfaces only.
    */
   notes            String?
+  /**
+   * Trailing-12-month sales rank and unit volume (NZ+AU combined), backfilled
+   * from a real sales report matched by exact sku - null for any product not
+   * in that report (new/untracked items), never guessed. Lower rank = more
+   * popular; drives the wholesale catalog's "Most Popular" sort, with
+   * null-rank products sorted to the end rather than the top.
+   */
+  salesRank        Int?          @map("sales_rank")
+  unitsSoldTotal   Int?          @map("units_sold_total")
   createdAt        DateTime      @default(now()) @map("created_at")
   updatedAt        DateTime      @updatedAt @map("updated_at")
 

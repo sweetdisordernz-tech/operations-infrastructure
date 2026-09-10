@@ -1139,6 +1139,36 @@ h3,
   }
 }
 
+.sd-sort-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.sd-sort-row label {
+  font-family: var(--font-ui), sans-serif;
+  font-size: 0.8125rem;
+  color: var(--sd-text-dim);
+  flex-shrink: 0;
+}
+
+.sd-sort-select {
+  font-family: var(--font-ui), sans-serif;
+  font-size: 0.85rem;
+  color: var(--sd-text);
+  background: var(--sd-white);
+  border: 1px solid var(--sd-border);
+  border-radius: var(--sd-radius-sharp);
+  padding: 0.45rem 0.75rem;
+  cursor: pointer;
+}
+
+.sd-sort-select:focus {
+  outline: 2px solid var(--sd-accent);
+  outline-offset: 1px;
+}
+
 .sd-filter-row {
   display: flex;
   gap: 0.5rem;

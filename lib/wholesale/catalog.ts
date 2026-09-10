@@ -32,6 +32,13 @@ export type WholesaleCatalogProduct = {
    */
   priceByRegion: Partial<Record<Region, number>>;
   imageBlobUrl: string | null;
+  /**
+   * Trailing-12-month sales rank (lower = more popular), null for a
+   * product with no sales history yet. Drives the catalog's "Most
+   * Popular" sort - see CatalogBrowser, which sorts null ranks to the end
+   * rather than treating them as rank 0.
+   */
+  salesRank: number | null;
 };
 
 export type WholesaleCatalog = {
@@ -103,6 +110,7 @@ export async function getWholesaleCatalog(
       price: homePrice,
       priceByRegion,
       imageBlobUrl: product.imageBlobUrl,
+      salesRank: product.salesRank,
     };
   });
 

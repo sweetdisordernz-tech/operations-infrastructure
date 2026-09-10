@@ -1,0 +1,26 @@
+match_range,match_name,new_sku,new_name,rank,units_total,notes
+Christmas,Tis the season to be naughty,SDP50,,47,304,
+Christmas,Jingle Balls,SDP80,,78,172,
+Christmas,Merry Crisis,SDP114,,80,170,
+Kiwi Range,Sweet As Bro Mix,SDK07,,131,90,
+Valentine's Range,Romance Revivers,SDP21,,191,19,
+Valentine's Range,Break Up Blues Busters,SDP22,,205,6,
+Sweet Disorder Core Range,Control Freak fizziies,SDP15,Control Freak Fizzies,201,7,
+Scent Dispensary,For Fart Sake Candle,TSD001,,199,12,
+Scent Dispensary,Shit Happens Candle,TSD002,,200,8,
+Treatmints,Treatmints Display Stand (36pc),SDT000,,160,50,
+Sweet Disorder Core Range,Bullshit Blockers,SDP13,,27,514,"Molly to confirm: backfilled onto the existing Jar-packaged Bullshit Blockers rather than creating a new product, on the assumption the ranking sheet's SDP13 row and this item are the same. Deliberately did NOT create a separate SDP13J ""Bullshit Blockers Jar"" listing (rank 45 / 315 units in the source data) since that would duplicate this same product - flag for Molly to confirm which treatment is right."
+Sweet Disorder Core Range,Grumpy Git Gummies,SDP115,,,,"Molly to confirm: SDP115 is an inferred SKU, not given directly in the source data - inferred from its Jar variant's SKU (SDP115J, ""Grumpy Git Gummies Jar""), which followed the base-SKU+""J"" pattern used throughout the same batch. No independent rank/units data exists for the bottle itself."
+Sweet Disorder Core Range,Legend Lozenges,SDP32,,,,
+Sweet Disorder Core Range,Smart Arse Suppressants,SDP01,,,,
+Sweet Disorder Core Range,Thanks a Million,SDP57,,,,
+Sweet Disorder Core Range,Concrete Pills,SDP62,,,,
+Sweet Disorder Core Range,Hangover Remedy,SDP66,,,,
+Sweet Disorder Core Range,Hangry Pills,SDP72,,,,
+Sweet Disorder Core Range,Midlife Crisis Supplements,SDP78,,,,
+Sweet Disorder Core Range,Superstar Fuel,SDP67,,,,
+Sweet Disorder Core Range,Tolerance Tablets,SDP12,,,,
+Sweet Disorder Core Range,Laughter Lozenges,SDP30,,,,
+Sweet Disorder Core Range,Jar of hugs,SDP39,Canned Hugs,22,706,"Renamed from the catalog's existing placeholder name ""Jar of hugs"" (a Bottle-packaged product, filling: Peach & Apple rings) to ""Canned Hugs"" per the ranking sheet - the two are almost certainly the same product (same range, same packaging, no other Bottle candidate for either name), and this also frees up the real name ""Jar of Hugs"" for the genuinely separate Jar-packaged variant (SDP39J) added alongside it. Molly to confirm this rename is right."
+Sweet Disorder Core Range,Mother Like No Other,SDP29,,44,321,
+Sweet Disorder Core Range,Get Shit Done,SDP58,,105,132,

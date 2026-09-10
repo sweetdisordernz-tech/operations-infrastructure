@@ -8,18 +8,62 @@ import type { WholesaleCatalog } from "@/lib/wholesale/catalog";
 
 const ALL = "__all__";
 
+type SortOption = "popular" | "az" | "price_desc" | "price_asc";
+
+const SORT_OPTIONS: Array<{ value: SortOption; label: string }> = [
+  { value: "popular", label: "Most Popular" },
+  { value: "az", label: "A–Z" },
+  { value: "price_desc", label: "Price: High to Low" },
+  { value: "price_asc", label: "Price: Low to High" },
+];
+
+/**
+ * "Most Popular" sorts by Product.salesRank (lower = more popular). A
+ * product with no rank yet (new/untracked item) sorts to the end rather
+ * than the top - treating "unranked" as "least popular" rather than
+ * "most", which is what a plain ascending sort on a nullable number would
+ * otherwise do (null/undefined would sort first).
+ */
+function sortProducts(products: WholesaleCatalog["products"], sort: SortOption) {
+  const sorted = [...products];
+  switch (sort) {
+    case "popular":
+      sorted.sort((a, b) => {
+        if (a.salesRank == null && b.salesRank == null) return a.name.localeCompare(b.name);
+        if (a.salesRank == null) return 1;
+        if (b.salesRank == null) return -1;
+        return a.salesRank - b.salesRank;
+      });
+      break;
+    case "az":
+      sorted.sort((a, b) => a.name.localeCompare(b.name));
+      break;
+    case "price_desc":
+      sorted.sort((a, b) => b.price - a.price);
+      break;
+    case "price_asc":
+      sorted.sort((a, b) => a.price - b.price);
+      break;
+  }
+  return sorted;
+}
+
 export function CatalogBrowser({ catalog }: { catalog: WholesaleCatalog }) {
   const [rangeFilter, setRangeFilter] = useState(ALL);
   const [fillingFilter, setFillingFilter] = useState(ALL);
+  const [sort, setSort] = useState<SortOption>("popular");
 
   const filtered = useMemo(
     () =>
-      catalog.products.filter(
-        (product) =>
-          (rangeFilter === ALL || product.rangeId === rangeFilter) &&
-          (fillingFilter === ALL || product.fillingId === fillingFilter),
+      sortProducts(
+        catalog.products.filter(
+          (product) =>
+            (rangeFilter === ALL || product.rangeId === rangeFilter) &&
+            (fillingFilter === ALL || product.fillingId === fillingFilter),
+        ),
+        sort,
       ),
-    [catalog.products, rangeFilter, fillingFilter],
+    [catalog.products, rangeFilter, fillingFilter, sort],
   );
 
   if (catalog.products.length === 0) {
@@ -33,6 +77,22 @@ export function CatalogBrowser({ catalog }: { catalog: WholesaleCatalog }) {
 
   return (
     <div>
+      <div className="sd-sort-row">
+        <label htmlFor="catalog-sort">Sort by</label>
+        <select
+          id="catalog-sort"
+          className="sd-sort-select"
+          value={sort}
+          onChange={(event) => setSort(event.target.value as SortOption)}
+        >
+          {SORT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className="sd-filter-row" aria-label="Filter by range">
         <button
           type="button"

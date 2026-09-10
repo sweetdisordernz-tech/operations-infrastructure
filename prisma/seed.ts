@@ -335,6 +335,172 @@ function loadMerch(): MerchRow[] {
   });
 }
 
+type SalesRankRow = { sku: string; rank: number; unitsTotal: number };
+
+/**
+ * Trailing-12-month sales rank/units (NZ+AU combined), matched by exact sku
+ * only - see Product.salesRank in schema.prisma. A sku in this file that
+ * doesn't match any product is logged and skipped, never guessed at; a
+ * product not in this file simply keeps salesRank/unitsSoldTotal null
+ * (new/untracked item), which the catalog's "Most Popular" sort treats as
+ * least popular rather than most.
+ */
+function loadSalesRank(): SalesRankRow[] {
+  const csvPath = join(__dirname, "data", "sales-rank.csv");
+  const content = readFileSync(csvPath, "utf8");
+  const [header, ...dataRows] = parseCsv(content);
+
+  const skuIdx = header.indexOf("sku");
+  const rankIdx = header.indexOf("rank");
+  const unitsIdx = header.indexOf("units_total");
+
+  return dataRows.map((cells) => ({
+    sku: cells[skuIdx].trim(),
+    rank: parseInt(cells[rankIdx].trim(), 10),
+    unitsTotal: parseInt(cells[unitsIdx].trim(), 10),
+  }));
+}
+
+type SkuBackfillRow = {
+  matchRange: string;
+  matchName: string;
+  newSku: string;
+  newName: string | null;
+  rank: number | null;
+  unitsTotal: number | null;
+  notes: string | null;
+};
+
+/**
+ * Backfills a real sku (and, where given, a rank/units and/or a corrected
+ * name) onto an EXISTING product that was seeded skuless via catalog.csv/
+ * new-ranges.csv, matched on (range, current exact name) - deliberately
+ * explicit per row rather than fuzzy-matched in code, since a couple of
+ * these are typo fixes (e.g. "Control Freak fizziies") or genuinely
+ * uncertain matches flagged in the notes column (backfilled onto
+ * Product.notes too, admin/ops-only - see the "Bullshit Blockers" and
+ * "Grumpy Git Gummies" rows in the CSV for the full story). Safe to re-run:
+ * matches by the CURRENT name, so once a row's rename has applied, its
+ * matchName below stops matching anything further (same idempotency
+ * pattern as the "BOX OF 36 WITH STAND" fixup earlier in this file) - see
+ * the loop below for how that's handled.
+ */
+function loadSkuBackfill(): SkuBackfillRow[] {
+  const csvPath = join(__dirname, "data", "product-sku-backfill.csv");
+  const content = readFileSync(csvPath, "utf8");
+  const [header, ...dataRows] = parseCsv(content);
+
+  const rangeIdx = header.indexOf("match_range");
+  const nameIdx = header.indexOf("match_name");
+  const skuIdx = header.indexOf("new_sku");
+  const newNameIdx = header.indexOf("new_name");
+  const rankIdx = header.indexOf("rank");
+  const unitsIdx = header.indexOf("units_total");
+  const notesIdx = header.indexOf("notes");
+
+  return dataRows.map((cells) => {
+    const rankRaw = nullIfBlank(cells[rankIdx]);
+    const unitsRaw = nullIfBlank(cells[unitsIdx]);
+    return {
+      matchRange: cells[rangeIdx].trim(),
+      matchName: cells[nameIdx].trim(),
+      newSku: cells[skuIdx].trim(),
+      newName: nullIfBlank(cells[newNameIdx]),
+      rank: rankRaw ? parseInt(rankRaw, 10) : null,
+      unitsTotal: unitsRaw ? parseInt(unitsRaw, 10) : null,
+      notes: nullIfBlank(cells[notesIdx]),
+    };
+  });
+}
+
+type NewCatalogProductRow = {
+  range: string;
+  sku: string;
+  name: string;
+  packagingType: PackagingType;
+  rank: number | null;
+  unitsTotal: number | null;
+};
+
+function loadNewCatalogProducts(fileName: string): NewCatalogProductRow[] {
+  const csvPath = join(__dirname, "data", fileName);
+  const content = readFileSync(csvPath, "utf8");
+  const [header, ...dataRows] = parseCsv(content);
+
+  const rangeIdx = header.indexOf("range");
+  const skuIdx = header.indexOf("sku");
+  const nameIdx = header.indexOf("name");
+  const packagingIdx = header.indexOf("packaging_type");
+  const rankIdx = header.indexOf("rank");
+  const unitsIdx = header.indexOf("units_total");
+
+  return dataRows.map((cells, rowNumber) => {
+    const packagingRaw = cells[packagingIdx]?.trim();
+    const packagingType = PACKAGING_TYPE_MAP[packagingRaw] ?? UPPERCASE_PACKAGING_TYPE_MAP[packagingRaw];
+    if (!packagingType) {
+      throw new Error(`${fileName} row ${rowNumber + 2}: unknown packaging_type "${packagingRaw}"`);
+    }
+    const rankRaw = nullIfBlank(cells[rankIdx]);
+    const unitsRaw = nullIfBlank(cells[unitsIdx]);
+    return {
+      range: cells[rangeIdx].trim(),
+      sku: cells[skuIdx].trim(),
+      name: cells[nameIdx].trim(),
+      packagingType,
+      rank: rankRaw ? parseInt(rankRaw, 10) : null,
+      unitsTotal: unitsRaw ? parseInt(unitsRaw, 10) : null,
+    };
+  });
+}
+
+type JarVariantRow = {
+  name: string;
+  sku: string;
+  baseRange: string;
+  baseName: string;
+  rank: number | null;
+  unitsTotal: number | null;
+  inferredBase: boolean;
+};
+
+/**
+ * New Jar-packaged products that are a same-novelty-name variant of an
+ * existing Bottle product, sold as a separate SKU - inherit the base
+ * product's Filling rather than guessing one independently (see the loop
+ * below). Two rows (flagged inferredBase: true) have no base sku given in
+ * the source ranking sheet; their base match was inferred from the jar
+ * sku's own numbering (baseSku + "J") rather than stated directly - see
+ * product-sku-backfill.csv's "Grumpy Git Gummies" row and this file's "Jar
+ * of Hugs" row for the reasoning, both flagged for Molly to confirm.
+ */
+function loadJarVariants(): JarVariantRow[] {
+  const csvPath = join(__dirname, "data", "jar-variants-batch.csv");
+  const content = readFileSync(csvPath, "utf8");
+  const [header, ...dataRows] = parseCsv(content);
+
+  const nameIdx = header.indexOf("name");
+  const skuIdx = header.indexOf("sku");
+  const baseRangeIdx = header.indexOf("base_range");
+  const baseNameIdx = header.indexOf("base_name");
+  const rankIdx = header.indexOf("rank");
+  const unitsIdx = header.indexOf("units_total");
+  const inferredIdx = header.indexOf("inferred_base");
+
+  return dataRows.map((cells) => {
+    const rankRaw = nullIfBlank(cells[rankIdx]);
+    const unitsRaw = nullIfBlank(cells[unitsIdx]);
+    return {
+      name: cells[nameIdx].trim(),
+      sku: cells[skuIdx].trim(),
+      baseRange: cells[baseRangeIdx].trim(),
+      baseName: cells[baseNameIdx].trim(),
+      rank: rankRaw ? parseInt(rankRaw, 10) : null,
+      unitsTotal: unitsRaw ? parseInt(unitsRaw, 10) : null,
+      inferredBase: cells[inferredIdx]?.trim().toLowerCase() === "true",
+    };
+  });
+}
+
 type LabelComplianceRow = {
   name: string;
   sku: string | null;
@@ -1144,6 +1310,247 @@ async function main() {
   console.log(
     `Seeded ${merchRangeByName.size} merch ranges (${merchProductCount} products, ` +
       `${merchNzPriced} NZ-priced / ${merchAuPriced} AU-priced, all wholesale_visible: false pending review)`,
+  );
+
+  // -------------------------------------------------------------------------
+  // SKU backfill onto existing skuless products (prisma/data/product-sku-
+  // backfill.csv) - see loadSkuBackfill() above for the matching rules.
+  // Must run before the jar-variant step below, since several jar variants
+  // inherit their Filling from a product this step gives a real sku (and,
+  // for one, a corrected name) to.
+  // -------------------------------------------------------------------------
+  const skuBackfillRows = loadSkuBackfill();
+  let skuBackfillApplied = 0;
+  const skuBackfillUnmatched: string[] = [];
+
+  for (const row of skuBackfillRows) {
+    const range = await prisma.productRange.findFirst({ where: { name: row.matchRange } });
+    const existing =
+      (range && (await prisma.product.findFirst({ where: { rangeId: range.id, name: row.matchName } }))) ??
+      (await prisma.product.findUnique({ where: { sku: row.newSku } }));
+
+    if (!existing) {
+      skuBackfillUnmatched.push(`${row.matchRange} / "${row.matchName}" -> ${row.newSku}`);
+      continue;
+    }
+
+    await prisma.product.update({
+      where: { id: existing.id },
+      data: {
+        sku: row.newSku,
+        name: row.newName ?? existing.name,
+        salesRank: row.rank ?? existing.salesRank,
+        unitsSoldTotal: row.unitsTotal ?? existing.unitsSoldTotal,
+        notes: row.notes ?? existing.notes,
+      },
+    });
+    skuBackfillApplied++;
+  }
+  console.log(
+    `Backfilled sku (+ rank/units where given) onto ${skuBackfillApplied} existing products` +
+      (skuBackfillUnmatched.length > 0
+        ? ` - ${skuBackfillUnmatched.length} unmatched: ${skuBackfillUnmatched.join(", ")}`
+        : ""),
+  );
+
+  // -------------------------------------------------------------------------
+  // New standalone products - real confirmed skus previously flagged as too
+  // ambiguous to add, now resolved (see prisma/data/new-lolly-products.csv /
+  // new-merch-products.csv). No filling data was given for any of these, so
+  // fillingId stays null rather than guessed - same "don't invent data"
+  // rule as everywhere else in this file. Priced with the same
+  // wholesalePriceFor() placeholder every other skuless/new product uses
+  // (Molly sets real pricing later via Master Connect); no AU price, since
+  // none was given.
+  // -------------------------------------------------------------------------
+  let newLollyCount = 0;
+  for (const row of loadNewCatalogProducts("new-lolly-products.csv")) {
+    const range = rangeByName.get(row.range);
+    if (!range) throw new Error(`new-lolly-products.csv: unknown range "${row.range}"`);
+
+    const product = await prisma.product.upsert({
+      where: { sku: row.sku },
+      update: {
+        name: row.name,
+        rangeId: range.id,
+        packagingType: row.packagingType,
+        wholesaleVisible: true,
+        salesRank: row.rank,
+        unitsSoldTotal: row.unitsTotal,
+      },
+      create: {
+        sku: row.sku,
+        name: row.name,
+        rangeId: range.id,
+        packagingType: row.packagingType,
+        minOrderQty: 1,
+        wholesaleVisible: true,
+        salesRank: row.rank,
+        unitsSoldTotal: row.unitsTotal,
+      },
+    });
+
+    await prisma.inventoryItem.upsert({
+      where: { productId: product.id },
+      update: {},
+      create: { productId: product.id, quantityOnHand: 0 },
+    });
+    await prisma.pricingTierProduct.upsert({
+      where: { pricingTierId_productId: { pricingTierId: pricingTier.id, productId: product.id } },
+      update: {},
+      create: {
+        pricingTierId: pricingTier.id,
+        productId: product.id,
+        price: wholesalePriceFor(product.packagingType),
+      },
+    });
+    newLollyCount++;
+  }
+  console.log(`Seeded ${newLollyCount} new standalone lolly products (wholesale_visible: true)`);
+
+  let newMerchCount = 0;
+  for (const row of loadNewCatalogProducts("new-merch-products.csv")) {
+    const range = merchRangeByName.get(row.range);
+    if (!range) throw new Error(`new-merch-products.csv: unknown merch range "${row.range}"`);
+
+    const product = await prisma.product.upsert({
+      where: { sku: row.sku },
+      update: {
+        name: row.name,
+        rangeId: range.id,
+        packagingType: row.packagingType,
+        wholesaleVisible: false,
+        salesRank: row.rank,
+        unitsSoldTotal: row.unitsTotal,
+      },
+      create: {
+        sku: row.sku,
+        name: row.name,
+        rangeId: range.id,
+        packagingType: row.packagingType,
+        minOrderQty: 1,
+        wholesaleVisible: false,
+        salesRank: row.rank,
+        unitsSoldTotal: row.unitsTotal,
+      },
+    });
+
+    await prisma.inventoryItem.upsert({
+      where: { productId: product.id },
+      update: {},
+      create: { productId: product.id, quantityOnHand: 0 },
+    });
+    await prisma.pricingTierProduct.upsert({
+      where: { pricingTierId_productId: { pricingTierId: pricingTier.id, productId: product.id } },
+      update: {},
+      create: {
+        pricingTierId: pricingTier.id,
+        productId: product.id,
+        price: wholesalePriceFor(product.packagingType),
+      },
+    });
+    newMerchCount++;
+  }
+  console.log(`Seeded ${newMerchCount} new standalone merch products (wholesale_visible: false pending review)`);
+
+  // -------------------------------------------------------------------------
+  // Jar-variant products (prisma/data/jar-variants-batch.csv) - same
+  // novelty name as an existing Bottle product, sold as a separate
+  // Jar-packaged sku, inheriting the base product's Filling rather than a
+  // guessed one. The base product must already exist by this point (either
+  // backfilled above or newly created above) - a missing base is logged and
+  // skipped, never given a fabricated filling.
+  // -------------------------------------------------------------------------
+  let jarVariantCount = 0;
+  const jarVariantUnmatchedBase: string[] = [];
+  for (const row of loadJarVariants()) {
+    const baseRange = await prisma.productRange.findFirst({ where: { name: row.baseRange } });
+    const base =
+      baseRange && (await prisma.product.findFirst({ where: { rangeId: baseRange.id, name: row.baseName } }));
+
+    if (!base) {
+      jarVariantUnmatchedBase.push(`"${row.name}" -> base "${row.baseName}" in ${row.baseRange}`);
+      continue;
+    }
+
+    const product = await prisma.product.upsert({
+      where: { sku: row.sku },
+      update: {
+        name: row.name,
+        rangeId: base.rangeId,
+        packagingType: PackagingType.JAR,
+        fillingId: base.fillingId,
+        wholesaleVisible: true,
+        salesRank: row.rank,
+        unitsSoldTotal: row.unitsTotal,
+        notes: row.inferredBase
+          ? `Jar variant matched to base product "${base.name}" by inferred sku pairing, not stated directly in the source data - Molly to confirm the filling is right.`
+          : undefined,
+      },
+      create: {
+        sku: row.sku,
+        name: row.name,
+        rangeId: base.rangeId,
+        packagingType: PackagingType.JAR,
+        fillingId: base.fillingId,
+        minOrderQty: 1,
+        wholesaleVisible: true,
+        salesRank: row.rank,
+        unitsSoldTotal: row.unitsTotal,
+        notes: row.inferredBase
+          ? `Jar variant matched to base product "${base.name}" by inferred sku pairing, not stated directly in the source data - Molly to confirm the filling is right.`
+          : null,
+      },
+    });
+
+    await prisma.inventoryItem.upsert({
+      where: { productId: product.id },
+      update: {},
+      create: { productId: product.id, quantityOnHand: 0 },
+    });
+    await prisma.pricingTierProduct.upsert({
+      where: { pricingTierId_productId: { pricingTierId: pricingTier.id, productId: product.id } },
+      update: {},
+      create: {
+        pricingTierId: pricingTier.id,
+        productId: product.id,
+        price: wholesalePriceFor(product.packagingType),
+      },
+    });
+    jarVariantCount++;
+  }
+  console.log(
+    `Seeded ${jarVariantCount} jar-variant products, inheriting filling from their base bottle` +
+      (jarVariantUnmatchedBase.length > 0
+        ? ` - ${jarVariantUnmatchedBase.length} skipped (no base match): ${jarVariantUnmatchedBase.join(", ")}`
+        : ""),
+  );
+
+  // -------------------------------------------------------------------------
+  // Trailing-12-month sales rank/units (prisma/data/sales-rank.csv) - exact
+  // sku match only against products that already exist by this point
+  // (including ones backfilled/created above), never fuzzy-matched. A sku
+  // with no matching product is logged and skipped.
+  // -------------------------------------------------------------------------
+  let salesRankApplied = 0;
+  const salesRankUnmatched: string[] = [];
+  for (const row of loadSalesRank()) {
+    const product = await prisma.product.findUnique({ where: { sku: row.sku } });
+    if (!product) {
+      salesRankUnmatched.push(row.sku);
+      continue;
+    }
+    await prisma.product.update({
+      where: { id: product.id },
+      data: { salesRank: row.rank, unitsSoldTotal: row.unitsTotal },
+    });
+    salesRankApplied++;
+  }
+  console.log(
+    `Applied sales rank/units to ${salesRankApplied} products by exact sku match` +
+      (salesRankUnmatched.length > 0
+        ? ` - ${salesRankUnmatched.length} unmatched skus: ${salesRankUnmatched.join(", ")}`
+        : ""),
   );
 
   // -------------------------------------------------------------------------
