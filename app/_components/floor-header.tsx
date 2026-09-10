@@ -10,7 +10,7 @@ export function FloorHeader({ title }: { title: string }) {
   return (
     <div className="sd-floor-header">
       <div className="sd-floor-header-top">
-        <span className="sd-floor-logo">Sweet Disorder</span>
+        <img className="sd-floor-logo" src="/sweet-disorder-logo.png" alt="Sweet Disorder" />
         <SwitchAppLink />
       </div>
       <h1>{title}</h1>

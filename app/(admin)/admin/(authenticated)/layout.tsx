@@ -22,7 +22,7 @@ export default async function AdminAuthenticatedLayout({
     <div className="sd-shell">
       <header className="sd-topbar">
         <Link className="sd-topbar-brand" href="/">
-          Sweet Disorder Ops
+          <img src="/sweet-disorder-logo.png" alt="Sweet Disorder" />
         </Link>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
           <span className="sd-topbar-surface">Master Connect</span>

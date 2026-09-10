@@ -48,7 +48,7 @@ const SURFACE_CARDS: SurfaceCard[] = [
 export default function RootFallbackPage() {
   return (
     <div className="sd-picker-shell">
-      <span className="sd-picker-logo">Sweet Disorder</span>
+      <img className="sd-picker-logo" src="/sweet-disorder-logo.png" alt="Sweet Disorder" />
       <div className="sd-picker-intro">
         <h1>Choose an app</h1>
         <p>

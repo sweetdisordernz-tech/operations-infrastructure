@@ -10,12 +10,19 @@ import {
 export const config = {
   matcher: [
     /*
-     * Run on everything except Next.js internals and static assets.
+     * Run on everything except Next.js internals and static assets - both
+     * the well-known ones (favicon.ico) and anything else served straight
+     * out of /public (e.g. sweet-disorder-logo.png), which is why the
+     * exclusion also covers any path ending in a file extension rather
+     * than naming files one by one. Without this, a public asset request
+     * made while a surface cookie/override is active gets the same
+     * `${prefix}${pathname}` rewrite as a real page (see below) and 404s,
+     * because no such path exists under e.g. /portal.
      * API routes ARE matched (surfaces need their own API scoping too),
      * but we skip the actual rewrite for /api and let those routes read
      * the resolved surface via header/cookie if they need it.
      */
-    "/((?!_next/static|_next/image|favicon.ico).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\..*$).*)",
   ],
 };
 

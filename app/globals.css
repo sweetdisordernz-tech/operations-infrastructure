@@ -162,10 +162,15 @@ h3,
 }
 
 .sd-topbar-brand {
-  font-family: var(--font-heading), sans-serif;
-  font-weight: 400;
-  color: var(--sd-text);
+  display: flex;
+  align-items: center;
   text-decoration: none;
+}
+
+.sd-topbar-brand img {
+  display: block;
+  height: 26px;
+  width: auto;
 }
 
 .sd-topbar-switch {
@@ -331,10 +336,10 @@ h3,
 }
 
 .sd-floor-logo {
-  display: inline-block;
-  font-family: var(--font-heading), sans-serif;
-  font-size: 0.85rem;
-  color: var(--sd-text-dim);
+  display: block;
+  height: 18px;
+  width: auto;
+  opacity: 0.7;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -835,10 +840,15 @@ h3,
 }
 
 .sd-portal-logo-mark {
-  font-family: var(--font-heading), sans-serif;
-  font-size: 1.25rem;
-  color: var(--sd-text);
+  display: flex;
+  align-items: center;
   text-decoration: none;
+}
+
+.sd-portal-logo-mark img {
+  display: block;
+  height: 34px;
+  width: auto;
 }
 
 .sd-portal-company-chip {
@@ -857,10 +867,9 @@ h3,
 
 .sd-portal-hero-mark {
   display: block;
-  font-family: var(--font-heading), sans-serif;
-  font-size: 0.95rem;
-  color: var(--sd-accent);
-  margin-bottom: 0.5rem;
+  height: 22px;
+  width: auto;
+  margin-bottom: 0.75rem;
 }
 
 .sd-portal-hero h1 {
@@ -887,10 +896,10 @@ h3,
 }
 
 .sd-portal-footer-brand {
-  font-family: var(--font-heading), sans-serif;
-  font-size: 1rem;
-  color: var(--sd-text);
-  margin: 0 0 0.35rem;
+  display: block;
+  height: 28px;
+  width: auto;
+  margin: 0 auto 0.5rem;
 }
 
 .sd-portal-footer-contact {
@@ -946,10 +955,9 @@ h3,
 }
 
 .sd-picker-logo {
-  font-family: var(--font-heading), sans-serif;
-  font-weight: 400;
-  font-size: 1.75rem;
-  color: var(--sd-text);
+  display: block;
+  height: 46px;
+  width: auto;
 }
 
 .sd-picker-intro {
