@@ -238,6 +238,34 @@ function loadProductImages(): ManualProductImage[] {
   }));
 }
 
+type LocalProductImageRow = { name: string; path: string };
+
+/**
+ * Real product photos supplied directly (not a fetchable URL - cropped
+ * from a screenshot and committed straight into /public, same treatment as
+ * the site logo), for products that had no image anywhere. Applied as a
+ * direct Product.imageBlobUrl assignment - deliberately NOT routed through
+ * fetchAndStoreProductImage/Vercel Blob like every other image source in
+ * this file, both because there's no URL to fetch (the bytes came from the
+ * conversation, not the web) and because BLOB_READ_WRITE_TOKEN isn't
+ * configured yet (see .env). Runs after both backfill passes below so it's
+ * never at risk of being overwritten by an (as of now nonexistent) matching
+ * entry in the automated feed or product-images.csv.
+ */
+function loadLocalProductImages(): LocalProductImageRow[] {
+  const csvPath = join(__dirname, "data", "local-product-images.csv");
+  const content = readFileSync(csvPath, "utf8");
+  const [header, ...dataRows] = parseCsv(content);
+
+  const nameIdx = header.indexOf("name");
+  const pathIdx = header.indexOf("path");
+
+  return dataRows.map((cells) => ({
+    name: cells[nameIdx].trim(),
+    path: cells[pathIdx].trim(),
+  }));
+}
+
 type WholesalePricingRow = {
   name: string;
   sku: string | null;
@@ -1763,6 +1791,30 @@ async function main() {
       console.log(`    - ${name}`);
     }
   }
+
+  // -------------------------------------------------------------------------
+  // Locally-supplied product photos (prisma/data/local-product-images.csv) -
+  // see loadLocalProductImages() above for why these skip the fetch/Blob
+  // pipeline entirely. Matched by exact name; a name with no product match
+  // is logged and skipped, never silently dropped.
+  // -------------------------------------------------------------------------
+  let localImageCount = 0;
+  const localImageUnmatched: string[] = [];
+  for (const row of loadLocalProductImages()) {
+    const product = await prisma.product.findFirst({ where: { name: row.name } });
+    if (!product) {
+      localImageUnmatched.push(row.name);
+      continue;
+    }
+    await prisma.product.update({ where: { id: product.id }, data: { imageBlobUrl: row.path } });
+    localImageCount++;
+  }
+  console.log(
+    `Applied ${localImageCount} locally-supplied product photos` +
+      (localImageUnmatched.length > 0
+        ? ` - ${localImageUnmatched.length} unmatched: ${localImageUnmatched.join(", ")}`
+        : ""),
+  );
 
   // -------------------------------------------------------------------------
   // Final tally - exactly how many catalog products still have zero image

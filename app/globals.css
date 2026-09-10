@@ -1139,6 +1139,46 @@ h3,
   }
 }
 
+.sd-search-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--sd-white);
+  border: 1px solid var(--sd-border);
+  border-radius: var(--sd-radius-sharp);
+  padding: 0.55rem 0.85rem;
+  margin-bottom: 0.75rem;
+  color: var(--sd-text-dim);
+}
+
+.sd-search-row:focus-within {
+  border-color: var(--sd-accent);
+}
+
+.sd-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-ui), sans-serif;
+  font-size: 0.9rem;
+  color: var(--sd-text);
+}
+
+.sd-search-input::placeholder {
+  color: var(--sd-text-dim);
+}
+
+/* Remove the native webkit "clear" (x) and search icons so only our own
+   Search icon shows - the input is type="search" for its semantics/mobile
+   keyboard, not for the browser's own chrome. */
+.sd-search-input::-webkit-search-decoration,
+.sd-search-input::-webkit-search-cancel-button,
+.sd-search-input::-webkit-search-results-button,
+.sd-search-input::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+}
+
 .sd-sort-row {
   display: flex;
   align-items: center;

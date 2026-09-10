@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Minus, Plus, Check, Candy } from "lucide-react";
+import { Minus, Plus, Check, Candy, Search } from "lucide-react";
 import { useCart } from "@/app/_components/cart-context";
 import { formatPackagingType } from "@/lib/format";
 import type { WholesaleCatalog } from "@/lib/wholesale/catalog";
@@ -52,19 +52,22 @@ export function CatalogBrowser({ catalog }: { catalog: WholesaleCatalog }) {
   const [rangeFilter, setRangeFilter] = useState(ALL);
   const [fillingFilter, setFillingFilter] = useState(ALL);
   const [sort, setSort] = useState<SortOption>("popular");
+  const [search, setSearch] = useState("");
 
-  const filtered = useMemo(
-    () =>
-      sortProducts(
-        catalog.products.filter(
-          (product) =>
-            (rangeFilter === ALL || product.rangeId === rangeFilter) &&
-            (fillingFilter === ALL || product.fillingId === fillingFilter),
-        ),
-        sort,
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return sortProducts(
+      catalog.products.filter(
+        (product) =>
+          (rangeFilter === ALL || product.rangeId === rangeFilter) &&
+          (fillingFilter === ALL || product.fillingId === fillingFilter) &&
+          (query === "" ||
+            product.name.toLowerCase().includes(query) ||
+            (product.fillingName?.toLowerCase().includes(query) ?? false)),
       ),
-    [catalog.products, rangeFilter, fillingFilter, sort],
-  );
+      sort,
+    );
+  }, [catalog.products, rangeFilter, fillingFilter, sort, search]);
 
   if (catalog.products.length === 0) {
     return (
@@ -77,6 +80,18 @@ export function CatalogBrowser({ catalog }: { catalog: WholesaleCatalog }) {
 
   return (
     <div>
+      <div className="sd-search-row">
+        <Search aria-hidden="true" size={16} />
+        <input
+          type="search"
+          className="sd-search-input"
+          placeholder="Search products or fillings"
+          aria-label="Search products or fillings"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+      </div>
+
       <div className="sd-sort-row">
         <label htmlFor="catalog-sort">Sort by</label>
         <select
