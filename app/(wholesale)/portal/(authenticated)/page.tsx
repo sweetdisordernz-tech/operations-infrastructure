@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Candy, ClipboardList } from "lucide-react";
+import { Candy, ClipboardList, ArrowRight } from "lucide-react";
 import { getCurrentWholesaleCustomer } from "@/lib/auth/current-user";
 import { getWholesaleCatalog } from "@/lib/wholesale/catalog";
 import { getReorderSuggestions } from "@/lib/wholesale/reorder";
@@ -22,7 +22,8 @@ export default async function PortalHome() {
     <div className="sd-portal-shell">
       <PortalHeader
         companyName={customer.companyName}
-        title={`Welcome back, ${customer.companyName}`}
+        title="Welcome back,"
+        heroAccent={customer.companyName}
         subtitle={`Hi ${customer.contactName.split(" ")[0]}, here's what's happening with your account.`}
         hero
       />
@@ -31,13 +32,22 @@ export default async function PortalHome() {
 
         <div className="sd-home-section">
           <h2>Get started</h2>
-          <div className="sd-home-links">
-            <Link className="sd-station-button" href="/catalog">
-              <Candy aria-hidden="true" />
-              Browse catalog
+          <p className="sd-script-accent sd-home-tagline">let&apos;s find your next favourite</p>
+          <div className="sd-home-hero-actions">
+            <Link className="sd-home-hero-primary" href="/catalog">
+              <span className="sd-home-hero-primary-icon">
+                <Candy aria-hidden="true" />
+              </span>
+              <span className="sd-home-hero-primary-text">
+                <span className="sd-home-hero-primary-title">Browse the catalog</span>
+                <span className="sd-home-hero-primary-sub">
+                  {catalog.products.length} products at your prices
+                </span>
+              </span>
+              <ArrowRight aria-hidden="true" className="sd-home-hero-primary-arrow" />
             </Link>
-            <Link className="sd-station-button" href="/orders">
-              <ClipboardList aria-hidden="true" />
+            <Link className="sd-home-hero-secondary" href="/orders">
+              <ClipboardList aria-hidden="true" size={18} />
               Order history
             </Link>
           </div>

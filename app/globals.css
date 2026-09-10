@@ -48,14 +48,29 @@
   --sd-accent-dark: var(--sd-teal-dark);
   --sd-on-accent: var(--sd-white); /* text/icon colour on top of teal */
 
-  /* Typography - font families come from next/font variables (app/layout.tsx) */
-  --font-heading: var(--font-heading);
-  --font-body: var(--font-body);
-  --font-ui: var(--font-ui);
+  /*
+   * Typography - the actual --font-heading/--font-body/--font-ui/--font-
+   * script values come from next/font (app/layout.tsx), which sets them
+   * via a `.__variable_*` class on <html>, not from anything declared
+   * here. Deliberately NOT redeclared in this block: a `--font-heading:
+   * var(--font-heading)` line here looks like a harmless default but is
+   * actually a same-element cascade race against that class - if this
+   * rule ends up winning (same specificity as the class, so it comes down
+   * to CSS source order, which shifts between builds), the property
+   * self-references and goes invalid, silently dropping the whole page to
+   * browser-default serif. Found exactly that regression while verifying
+   * this pass's new --font-script - fixed by removing the redeclaration
+   * rather than papering over it for script alone.
+   */
 
-  /* Shape - exactly two radius values, used everywhere, never a third */
+  /* Shape - exactly two structural radius values, used everywhere for
+     buttons/inputs/cards, never a third. --sd-radius-pill is a deliberate
+     third value reserved for the small set of round, label-seal-inspired
+     accents called out explicitly below (search bar, badges) - never used
+     for an ordinary button or card. */
   --sd-radius-sharp: 0px; /* buttons, tags, brand-forward elements */
   --sd-radius-card: 6px; /* cards/containers on denser screens */
+  --sd-radius-pill: 999px; /* round seal/badge accents only - see above */
 
   /* Elevation - subtle, cards read as separated from the page, not flat */
   --sd-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 10px rgba(0, 0, 0, 0.05);
@@ -139,6 +154,21 @@ h3,
   font-weight: 400;
   line-height: 1.4;
   color: var(--sd-text-dim);
+}
+
+/*
+ * Script accent - Wholesale Portal only (see the font comment in
+ * app/layout.tsx for why this isn't part of the shared --font-* system).
+ * Used for a handful of deliberate personality moments: a hero accent
+ * word, a handwritten-style note - never for a whole sentence of body
+ * copy or a heading that needs to stay legible/scannable. Sized up from
+ * its own font-size (Caveat renders visually smaller than its point size
+ * next to Francois One/DM Sans) so it reads as intentional, not undersized.
+ */
+.sd-script-accent {
+  font-family: var(--font-script), cursive;
+  font-weight: 700;
+  line-height: 1;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -729,7 +759,17 @@ h3,
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  background: var(--sd-white);
+  background-color: var(--sd-white);
+  /*
+   * Very faint paper grain, evoking the product labels' matte paper stock
+   * rather than a flat digital white - an inline fractal-noise SVG tiled
+   * across the page, alpha scaled down to ~3.5% by the feColorMatrix so it
+   * reads as warmth/texture at a glance and disappears under scrutiny.
+   * Portal-only (the other three surfaces stay flat/dense-dashboard white)
+   * and layered under all content, so it never touches text contrast.
+   */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.035 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
   padding-bottom: 5.5rem; /* clears the fixed bottom nav */
 }
 
@@ -862,6 +902,7 @@ h3,
 }
 
 .sd-portal-hero {
+  position: relative;
   padding: 2rem 1.25rem 1rem;
 }
 
@@ -880,12 +921,64 @@ h3,
   margin: 0;
 }
 
+.sd-hero-accent {
+  display: block;
+  font-size: 1.9rem;
+  color: var(--sd-accent-dark);
+}
+
 .sd-portal-hero p {
   font-family: var(--font-body), sans-serif;
   color: var(--sd-text-dim);
   margin: 0.6rem 0 0;
   font-size: 1rem;
   max-width: 32rem;
+}
+
+/*
+ * Decorative seal - see the comment in portal-header.tsx. A small stamped
+ * "coin" in the top-right of the hero, rotated a few degrees off-true like
+ * an actual ink stamp rather than a perfectly placed digital badge. Absent
+ * on narrow phones (space is tight there and the hero text already carries
+ * the personality), appears from the tablet breakpoint up.
+ */
+.sd-hero-seal {
+  display: none;
+}
+
+@media (min-width: 480px) {
+  .sd-hero-seal {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 0.1rem;
+    position: absolute;
+    top: 1.5rem;
+    right: 1.25rem;
+    width: 5.5rem;
+    height: 5.5rem;
+    border-radius: var(--sd-radius-pill);
+    border: 1.5px solid var(--sd-accent);
+    outline: 1px dashed var(--sd-accent);
+    outline-offset: -6px;
+    transform: rotate(8deg);
+    color: var(--sd-accent-dark);
+    font-family: var(--font-ui), sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .sd-hero-seal span {
+    font-size: 0.55rem;
+    font-weight: 600;
+  }
+
+  .sd-hero-seal strong {
+    font-size: 0.7rem;
+    font-weight: 800;
+  }
 }
 
 .sd-portal-footer {
@@ -1139,20 +1232,27 @@ h3,
   }
 }
 
+/*
+ * Pill-shaped and warm rather than a flat rectangular input - the one
+ * place a fully round shape earns it, echoing the product labels' round
+ * seal mark rather than the system's usual sharp-cornered inputs (see
+ * --sd-radius-pill above).
+ */
 .sd-search-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  background: var(--sd-white);
-  border: 1px solid var(--sd-border);
-  border-radius: var(--sd-radius-sharp);
-  padding: 0.55rem 0.85rem;
-  margin-bottom: 0.75rem;
-  color: var(--sd-text-dim);
+  gap: 0.55rem;
+  background: var(--sd-bg-subtle);
+  border: 1.5px solid var(--sd-border);
+  border-radius: var(--sd-radius-pill);
+  padding: 0.6rem 1.1rem;
+  margin-bottom: 0.35rem;
+  color: var(--sd-accent-dark);
 }
 
 .sd-search-row:focus-within {
   border-color: var(--sd-accent);
+  background: var(--sd-white);
 }
 
 .sd-search-input {
@@ -1179,34 +1279,61 @@ h3,
   -webkit-appearance: none;
 }
 
-.sd-sort-row {
+/* The handwritten-style nudge under the search bar - one of the portal's
+   few deliberate script moments (see .sd-script-accent), slightly rotated
+   like an actual pen annotation rather than typeset copy. */
+.sd-search-note {
+  margin: 0 0 0.85rem 1.1rem;
+  font-size: 1.05rem;
+  color: var(--sd-text-dim);
+  transform: rotate(-1.5deg);
+  transform-origin: left center;
+}
+
+/*
+ * Sort as a row of icon-labeled toggle chips instead of a plain <select> -
+ * visually a sibling of the range/filling filter chips below, but styled
+ * with the accent-dark active state (rather than filter chips' flat accent
+ * fill) so the two rows stay visually distinguishable at a glance despite
+ * sharing a chip shape.
+ */
+.sd-sort-toggle-row {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.35rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sd-sort-toggle {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  margin-bottom: 0.75rem;
-}
-
-.sd-sort-row label {
+  gap: 0.35rem;
   font-family: var(--font-ui), sans-serif;
-  font-size: 0.8125rem;
+  font-size: 0.8rem;
+  font-weight: 600;
   color: var(--sd-text-dim);
-  flex-shrink: 0;
-}
-
-.sd-sort-select {
-  font-family: var(--font-ui), sans-serif;
-  font-size: 0.85rem;
-  color: var(--sd-text);
   background: var(--sd-white);
   border: 1px solid var(--sd-border);
-  border-radius: var(--sd-radius-sharp);
-  padding: 0.45rem 0.75rem;
+  border-radius: var(--sd-radius-pill);
+  padding: 0.4rem 0.85rem;
   cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--sd-transition), border-color var(--sd-transition),
+    color var(--sd-transition);
 }
 
-.sd-sort-select:focus {
-  outline: 2px solid var(--sd-accent);
-  outline-offset: 1px;
+.sd-sort-toggle:hover {
+  border-color: var(--sd-accent-dark);
+  color: var(--sd-accent-dark);
+}
+
+.sd-sort-toggle.active {
+  background: var(--sd-accent-dark);
+  border-color: var(--sd-accent-dark);
+  color: var(--sd-on-accent);
 }
 
 .sd-filter-row {
@@ -1220,17 +1347,20 @@ h3,
 
 .sd-filter-chip {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
   font-family: var(--font-ui), sans-serif;
   background: var(--sd-white);
-  border: 1px solid var(--sd-border);
-  border-radius: var(--sd-radius-sharp);
+  border: 1.5px solid var(--sd-border);
+  border-radius: var(--sd-radius-pill); /* one of the portal's deliberate round accents - see --sd-radius-pill */
   padding: 0.5rem 1rem;
   font-size: 0.85rem;
   color: var(--sd-text);
   cursor: pointer;
   white-space: nowrap;
   transition: background-color var(--sd-transition), border-color var(--sd-transition),
-    color var(--sd-transition);
+    color var(--sd-transition), transform var(--sd-transition), box-shadow var(--sd-transition);
 }
 
 .sd-filter-chip:hover {
@@ -1242,6 +1372,8 @@ h3,
   border-color: var(--sd-accent);
   color: var(--sd-on-accent);
   font-weight: 700;
+  box-shadow: 0 2px 8px rgba(66, 186, 181, 0.35);
+  transform: translateY(-1px);
 }
 
 .sd-product-list {
@@ -1285,16 +1417,105 @@ h3,
 }
 
 .sd-product-card {
+  position: relative;
   background: var(--sd-white);
   border: 1px solid var(--sd-border);
   border-radius: var(--sd-radius-sharp); /* real site's product cards are sharp-cornered, not the dense-dashboard 6px */
   box-shadow: var(--sd-shadow-card);
   padding: 0.6rem;
-  transition: box-shadow var(--sd-transition);
+  transition: box-shadow var(--sd-transition), transform var(--sd-transition);
 }
 
+/* A slight stamped-label tilt on hover rather than a flat colour/shadow
+   change only - a small nod to the logo's own tilted treatment. Alternates
+   left/right by grid position so a whole row doesn't lean the same way. */
 .sd-product-card:hover {
   box-shadow: var(--sd-shadow-card-hover);
+  transform: rotate(-1deg) scale(1.025);
+}
+
+.sd-catalog-grid .sd-product-card:nth-child(even):hover {
+  transform: rotate(1deg) scale(1.025);
+}
+
+/*
+ * Spotlight/bestseller - the #1 most-popular product called out above the
+ * regular grid (see CatalogBrowser's isDefaultView), sized up and paired
+ * with a circular seal badge instead of just being first-in-grid. Breaks
+ * the grid's uniform rhythm deliberately, the one place on this page that
+ * does.
+ */
+.sd-spotlight-wrap {
+  margin-bottom: 1.25rem;
+}
+
+.sd-spotlight-wrap .sd-product-card {
+  display: grid;
+  grid-template-columns: 9rem 1fr;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border-color: var(--sd-accent);
+  border-width: 1.5px;
+}
+
+.sd-spotlight-wrap .sd-product-image {
+  aspect-ratio: 4 / 5;
+  margin-bottom: 0;
+  align-self: start;
+}
+
+.sd-spotlight-wrap .sd-product-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.sd-spotlight-wrap .sd-product-name {
+  font-size: 1.25rem;
+}
+
+.sd-spotlight-wrap .sd-product-meta {
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.sd-spotlight-wrap .sd-product-row {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin-top: 0.3rem;
+}
+
+@media (min-width: 420px) {
+  .sd-spotlight-wrap .sd-product-row {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.sd-bestseller-seal {
+  position: absolute;
+  top: -0.6rem;
+  left: -0.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.25rem;
+  height: 4.25rem;
+  border-radius: var(--sd-radius-pill);
+  background: var(--sd-accent-dark);
+  color: var(--sd-on-accent);
+  font-family: var(--font-ui), sans-serif;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-align: center;
+  line-height: 1.15;
+  transform: rotate(-10deg);
+  box-shadow: var(--sd-shadow-card);
+  z-index: 1;
 }
 
 .sd-product-image {
@@ -1653,10 +1874,114 @@ h3,
   margin: 0 0 0.6rem;
 }
 
-.sd-home-links {
+.sd-home-tagline {
+  font-size: 1.15rem;
+  color: var(--sd-accent-dark);
+  margin: -0.35rem 0 0.85rem;
+}
+
+/*
+ * Asymmetric replacement for the old "two equal buttons" layout - one
+ * dominant, richly-styled primary action (this is the surface's whole
+ * point, so it gets the visual weight) plus a small quiet secondary link,
+ * rather than treating "browse the catalog" and "order history" as equally
+ * important. Portal-specific classes, not a reuse of .sd-station-button
+ * (Floor App's station picker), so the two surfaces can diverge freely.
+ */
+.sd-home-hero-actions {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+.sd-home-hero-primary {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: linear-gradient(135deg, var(--sd-teal) 0%, var(--sd-accent-dark) 130%);
+  border-radius: var(--sd-radius-card);
+  box-shadow: var(--sd-shadow-card);
+  padding: 1.5rem;
+  text-decoration: none;
+  color: var(--sd-on-accent);
+  transition: box-shadow var(--sd-transition), transform var(--sd-transition);
+}
+
+.sd-home-hero-primary:hover {
+  box-shadow: var(--sd-shadow-card-hover);
+  transform: rotate(-0.5deg) translateY(-2px);
+}
+
+.sd-home-hero-primary:active {
+  transform: rotate(0deg) scale(0.99);
+}
+
+.sd-home-hero-primary-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: var(--sd-radius-pill);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.sd-home-hero-primary-icon svg {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.sd-home-hero-primary-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.sd-home-hero-primary-title {
+  font-family: var(--font-heading), sans-serif;
+  font-size: 1.25rem;
+}
+
+.sd-home-hero-primary-sub {
+  font-family: var(--font-body), sans-serif;
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.sd-home-hero-primary-arrow {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  transition: transform var(--sd-transition);
+}
+
+.sd-home-hero-primary:hover .sd-home-hero-primary-arrow {
+  transform: translateX(3px);
+}
+
+.sd-home-hero-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  align-self: flex-start;
+  background: transparent;
+  border: 1px solid var(--sd-border);
+  border-radius: var(--sd-radius-pill);
+  padding: 0.55rem 1.1rem;
+  text-decoration: none;
+  color: var(--sd-text-dim);
+  font-family: var(--font-ui), sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: border-color var(--sd-transition), color var(--sd-transition);
+}
+
+.sd-home-hero-secondary:hover {
+  border-color: var(--sd-accent);
+  color: var(--sd-accent-dark);
 }
 
 /* ---------------------------------------------------------------------- */
